@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Orbit Wars</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{--bg:#0b0e2a;--pn:#151a45;--c:#4de1ff;--p:#ff4d8d;--a:#ffc857;--t:#e8eaff;--d:#8d93c9}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;font:18px 'Chakra Petch',system-ui,sans-serif;color:var(--t);background:radial-gradient(ellipse at 30% 0,#1d2260,var(--bg) 60%) fixed;display:flex;flex-direction:column;align-items:center;padding:10px;min-height:100vh}
+h1{font-size:2.2rem;margin:.2em 0}h1 i{color:var(--c);font-style:normal}h1 b{color:var(--p)}
+p{margin:.4em 0;line-height:1.4}
+.card{background:var(--pn);border:2px solid var(--c);border-radius:14px;padding:18px 20px;width:min(95vw,500px);margin-top:12px}
+.btn{font:inherit;font-weight:700;border:0;background:var(--a);color:#1a1630;padding:9px 16px;border-radius:10px;cursor:pointer}
+.btn:disabled{opacity:.35;cursor:default}.btn.alt{background:none;color:var(--t);border:2px solid var(--d)}
+.btn.on{outline:3px solid var(--t)}
+input{font:700 1.4rem 'Chakra Petch',system-ui,sans-serif;background:var(--bg);color:var(--t);border:2px solid var(--d);border-radius:10px;padding:6px;width:8ch;text-transform:uppercase;letter-spacing:4px;text-align:center}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.code{font-size:3rem;font-weight:700;letter-spacing:10px;color:var(--a)}
+.msg{color:var(--p);min-height:1.2em}li{margin:3px 0}summary{cursor:pointer;color:var(--c);margin-top:10px}
+#ships{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;width:min(96vw,900px)}
+.sc{background:var(--pn);border:2px solid #2b3380;border-radius:12px;padding:10px;cursor:pointer;font-size:.9rem}
+.sc:hover,.sc.on{border-color:var(--a)}.sc h3{margin:2px 0;font-size:1.2rem}.sc b{color:var(--a)}
+#wrap{width:min(98vw,calc((100vh - 230px)*1.6667),1100px)}
+#hud{display:flex;gap:10px;justify-content:space-between}
+.pl{flex:1;font-size:.95rem}.pl.r{text-align:right}
+.bar{height:14px;background:#222862;border-radius:7px;overflow:hidden;margin-top:3px}.bar i{display:block;height:100%;transition:width .5s}
+#status{min-height:2.3em;display:flex;align-items:center;justify-content:center;gap:12px;text-align:center;font-size:1.1rem}
+canvas{width:100%;display:block;border-radius:12px;border:2px solid #2b3380;cursor:crosshair;background:var(--bg)}
+#wb{display:flex;gap:10px;justify-content:center;margin-top:8px;flex-wrap:wrap}
+</style></head><body>
+<h1><i>Orbit</i> <b>Wars</b></h1>
+<section id="lobby">
+<div class="card" id="start">
+<p>Raumschiff-Duell mit kreisenden Planeten. Zielen mit dem Cursor, Klick schießt. Du siehst keine Flugbahn, du musst die Schwerkraft lesen.</p>
+<div class="row"><button class="btn" id="create">Raum erstellen</button></div>
+<div class="row"><input id="codeIn" maxlength="4" placeholder="CODE" autocomplete="off"><button class="btn alt" id="join">Beitreten</button></div>
+<p class="msg" id="lmsg"></p>
+<details><summary>Regeln</summary><ul>
+<li>Abstand Schiff zu Cursor = Kraft, Richtung = Zielrichtung.</li>
+<li>Planeten ziehen Schüsse an und kreisen weiter, auch während du zielst. Die letzten Schüsse bleiben als blasse Spur sichtbar.</li>
+<li>Explosionen machen Schaden nach Entfernung. Auch eigene Schüsse treffen dich.</li>
+<li>Jedes Schiff hat eine Hauptwaffe (unbegrenzt) und eine Seitenwaffe (begrenzte Ladungen).</li>
+<li>Wer als Zweiter beginnt, bekommt 15 extra Lebenspunkte als Ausgleich. Wer anfängt, wechselt jede Runde.</li></ul></details></div>
+<div class="card" id="wait" hidden><p>Dein Raumcode:</p><div class="code" id="codeShow">····</div><p>Gib ihn deinem Mitspieler oder schick den Link.</p>
+<div class="row"><button class="btn" id="copy">Link kopieren</button></div><p style="color:var(--d)">Warte auf Mitspieler …</p></div>
+</section>
+<section id="pick" hidden style="text-align:center"><p id="pst">Wähle dein Schiff:</p><div id="ships"></div></section>
+<section id="game" hidden><div id="wrap">
+<div id="hud"><div class="pl" id="h0"></div><div class="pl r" id="h1"></div></div>
+<div id="status"></div><canvas id="cv"></canvas><div id="wb"></div></div></section>
+<script>
+const $=s=>document.querySelector(s),W=1000,H=600,G=2000,DT=1/60,K=3.2,MAXP=240;
+const COL=['#4de1ff','#ff4d8d'],AL='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',PRE='orbitwars-';
+const SHIPS=[
+{name:'Falke',hp:100,sr:17,d:'Ausgewogen',main:{n:'Plasma',dmg:26,rad:42,gf:1,spd:1,pd:.12,d:'Solider Treffer'},side:{n:'Streuschuss',dmg:14,rad:28,gf:1,spd:1,fan:1,pd:.06,ammo:3,d:'3 Schüsse im Fächer'}},
+{name:'Koloss',hp:140,sr:22,d:'Zäh, großes Ziel',main:{n:'Torpedo',dmg:34,rad:55,gf:1.35,spd:.8,pd:.2,d:'Schwer, stark angezogen'},side:{n:'Reparatur',heal:25,ammo:2,d:'Heilt 25, Zug weg'}},
+{name:'Nadel',hp:80,sr:13,d:'Klein und fragil',main:{n:'Laser',dmg:18,rad:16,gf:0,spd:1.5,pd:.04,d:'Fliegt gerade'},side:{n:'Splitter',dmg:16,rad:34,gf:1,spd:1,split:1,pd:.08,ammo:3,d:'Teilt sich in 3'}},
+{name:'Wirbel',hp:100,sr:17,d:'Chaos-Pilot',main:{n:'Pulsbombe',dmg:20,rad:80,gf:1,spd:1,pd:.15,d:'Riesiger Radius'},side:{n:'Zeitsprung',warp:110,ammo:2,d:'Planeten springen vor'}}];
+let peer,conn,isHost=false,me=0,game=0,S=null,conned=false,score=[0,0],picks=[null,null],myPick=null,sel=0,mx=500,my=300,shake=0,flash=0,parts=[],fl=[],acc=0,lt=0;
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function genMap(seed){
+ const R=rng(seed),ships=[{x:70,y:130+R()*340},{x:930,y:130+R()*340}],pl=[];
+ const free=(x,y,e,g)=>{for(const s of ships){const dx=s.x-x,dy=s.y-y,m=e+100;if(dx*dx+dy*dy<m*m)return 0}
+  for(const p of pl){const dx=p.cx-x,dy=p.cy-y,m=e+p.e+g;if(dx*dx+dy*dy<m*m)return 0}return 1};
+ const want=3+Math.floor(R()*2);
+ for(let t=0;t<400&&pl.length<want;t++){
+  const r=24+R()*20,o=15+R()*40,e=r+o,x=250+R()*500,y=70+R()*460;if(!free(x,y,e,10))continue;
+  const a=R()*2-1,b=R()*2-1,l=Math.sqrt(a*a+b*b)||1,w=.5+R()*.6,sg=R()<.5?-1:1,ox=a/l*o,oy=b/l*o;
+  pl.push({x:x+ox,y:y+oy,r,m:r*r,h:Math.floor(R()*360),bh:0,cx:x,cy:y,or:o,e,ox,oy,ou:-oy*w*sg,ov:ox*w*sg,w2:w*w});
+ }
+ if(R()<.5)for(let t=0;t<100;t++){const x=260+R()*480,y=80+R()*440;if(free(x,y,15,70)){pl.push({x,y,r:15,m:4500,h:0,bh:1,cx:x,cy:y,or:0,e:15,ox:0,oy:0,ou:0,ov:0,w2:0});break}}
+ const stars=Array.from({length:80},()=>[R()*W,R()*H,R()*1.6+.3,R()]);
+ return{seed,ships,planets:pl,stars,tick:0,baseTick:0,base:null,turn:0,over:0,winner:-1,anim:null,ammo:[0,0],ghost:[null,null]};
+}
+function stepO(a){for(const p of a){p.ou-=p.w2*p.ox*DT;p.ov-=p.w2*p.oy*DT;p.ox+=p.ou*DT;p.oy+=p.ov*DT;p.x=p.cx+p.ox;p.y=p.cy+p.oy}}
+const snap=()=>{S.base=S.planets.map(p=>({...p}));S.baseTick=S.tick};
+function worldTo(T){T=Math.max(T,S.baseTick);S.planets=S.base.map(p=>({...p}));for(let t=S.baseTick;t<T;t++)stepO(S.planets);S.tick=T}
+const rot=(x,y,c,s)=>[x*c-y*s,x*s+y*c];
+function simFlight(sid,wp,vx,vy){
+ const sh=S.ships[sid],pl=S.planets.map(p=>({...p})),pr=[];
+ const mk=(x,y,vx,vy,st,ch)=>({x,y,vx,vy,start:st,age:0,ch,xs:[x],ys:[y],hit:null,done:0});
+ const rs=wp.fan?[[1,0],[.991561,.129634],[.991561,-.129634]]:[[1,0]];
+ for(const [c,s] of rs){let [ax,ay]=rot(vx,vy,c,s);const l=Math.sqrt(ax*ax+ay*ay)||1;
+  pr.push(mk(sh.x+ax/l*(sh.sr+5),sh.y+ay/l*(sh.sr+5),ax*wp.spd,ay*wp.spd,0,0))}
+ let n=0;
+ for(;n<1500;n++){
+  stepO(pl);let act=0;const born=[];
+  for(const p of pr){if(p.done)continue;act=1;let ax=0,ay=0;
+   if(wp.gf){for(const q of pl){const dx=q.x-p.x,dy=q.y-p.y,d2=dx*dx+dy*dy+400,inv=G*q.m/(d2*Math.sqrt(d2));ax+=dx*inv;ay+=dy*inv}ax*=wp.gf;ay*=wp.gf}
+   p.vx+=ax*DT;p.vy+=ay*DT;p.x+=p.vx*DT;p.y+=p.vy*DT;p.age++;p.xs.push(p.x);p.ys.push(p.y);
+   for(let j=0;j<pl.length&&!p.hit;j++){const q=pl[j],dx=q.x-p.x,dy=q.y-p.y,m=q.r+3;if(dx*dx+dy*dy<m*m)p.hit={k:'p',i:j}}
+   for(let j=0;j<2&&!p.hit;j++){if(j===sid&&p.age<36)continue;const s=S.ships[j],dx=s.x-p.x,dy=s.y-p.y,m=s.sr+4;if(dx*dx+dy*dy<m*m)p.hit={k:'s',i:j}}
+   if(!p.hit&&(p.x<-250||p.x>W+250||p.y<-250||p.y>H+250))p.hit={k:'o'};
+   if(p.hit)p.done=1;
+   else if(wp.split&&!p.ch&&p.age===40)for(const sg of[1,-1]){const[a,b]=rot(p.vx,p.vy,.980067,.198669*sg);born.push(mk(p.x,p.y,a,b,n+1,1))}
+  }
+  pr.push(...born);if(!act&&!born.length)break;
+  if(!pr.some(p=>!p.done)&&!born.length){n++;break}
+ }
+ return{projs:pr,n};
+}
+function aimVel(sid,px,py){const s=S.ships[sid];const dx=px-s.x,dy=py-s.y,l=Math.sqrt(dx*dx+dy*dy);if(l<18)return null;const f=Math.min(l,MAXP)/l;return[dx*f*K,dy*f*K]}
+function act(sid,w,vx,vy,tick){
+ const sp=SHIPS[picks[sid]],wp=w?sp.side:sp.main;worldTo(tick);
+ if(w)S.ammo[sid]--;
+ if(wp.heal){const s=S.ships[sid];s.hp=Math.min(s.max,s.hp+wp.heal);boom(s.x,s.y,'#6dff9a',30,120);fl.push({x:s.x,y:s.y-40,t:'+'+wp.heal,c:'#6dff9a',l:1.2});endTurn()}
+ else if(wp.warp){for(let i=0;i<wp.warp;i++)stepO(S.planets);S.tick=tick+wp.warp;flash=1;endTurn()}
+ else{const res=simFlight(sid,wp,vx,vy);S.anim={res,i:0,ps:0,sid,wp,t0:tick};S.ghost[sid]=res.projs.map(p=>({xs:p.xs,ys:p.ys}));S.aim=S.aim||[];S.aim[sid]=[vx,vy]}
+ ui();
+}
+function boom(x,y,c,n,sp){for(let i=0;i<n;i++){const a=Math.random()*6.283,v=(.3+Math.random())*sp;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:1,c})}}
+function finish(){
+ const a=S.anim,rem=new Set(),wp=a.wp;
+ while(a.ps<a.res.n){stepO(S.planets);a.ps++}S.tick=a.t0+a.res.n;
+ for(const p of a.res.projs.filter(p=>p.hit).sort((u,v)=>u.start+u.xs.length-v.start-v.xs.length)){
+  const h=p.hit,x=p.xs[p.xs.length-1],y=p.ys[p.ys.length-1];if(h.k==='o')continue;
+  if(h.k==='p'&&S.planets[h.i].bh){boom(x,y,'#b07cff',14,110);continue}
+  S.ships.forEach((s,j)=>{const d=Math.sqrt((s.x-x)**2+(s.y-y)**2);let dm=d<=s.sr?wp.dmg:d<s.sr+wp.rad?wp.dmg*(1-(d-s.sr)/wp.rad):0;dm=Math.round(dm);
+   if(dm>0){s.hp-=dm;fl.push({x:s.x,y:s.y-40,t:'-'+dm,c:'#fff',l:1.2});boom(s.x,s.y,COL[j],30,200);shake=Math.max(shake,8+dm/3)}});
+  boom(x,y,'#ffc857',20+wp.rad/3,130+wp.rad);
+  if(h.k==='p'){const q=S.planets[h.i];q.r*=1-wp.pd;q.m=q.r*q.r;if(q.r<14)rem.add(h.i)}
+ }
+ S.planets=S.planets.filter((_,i)=>!rem.has(i));S.anim=null;endTurn();
+}
+function endTurn(){
+ const d0=S.ships[0].hp<=0,d1=S.ships[1].hp<=0;
+ if(d0||d1){S.over=1;S.winner=d0&&d1?(S.ships[0].hp>S.ships[1].hp?0:S.ships[0].hp<S.ships[1].hp?1:-1):d0?1:0;if(S.winner>=0)score[S.winner]++}
+ else{S.turn=1-S.turn;sel=0}
+ snap();ui();
+}
+/* ---------- Zeichnen ---------- */
+const cv=$('#cv'),ctx=cv.getContext('2d');
+function resize(){const r=cv.getBoundingClientRect(),d=devicePixelRatio||1;cv.width=Math.round(r.width*d);cv.height=Math.round(r.width*d*H/W)}
+addEventListener('resize',resize);
+function shipPath(c,t,s){c.beginPath();
+ const P=[[[1.3,0],[-.9,.85],[-.4,0],[-.9,-.85]],[[1.1,.45],[1.1,-.45],[.3,-1],[-.9,-.85],[-1.1,0],[-.9,.85],[.3,1]],[[1.9,0],[-.4,.4],[-1,.95],[-.8,0],[-1,-.95],[-.4,-.4]]][t];
+ if(P){P.forEach(([x,y],i)=>i?c.lineTo(x*s,y*s):c.moveTo(x*s,y*s));c.closePath()}
+ else{c.moveTo(.8*s,0);c.arc(0,0,.8*s,0,6.283);for(const y of[-1,1]){c.moveTo(-.3*s+.3*s,y*s);c.arc(-.3*s,y*s,.3*s,0,6.283)}}}
+function drawShip(c,t,col,s,ang){c.save();c.rotate(ang);c.shadowColor=col;c.shadowBlur=18;c.fillStyle='#0b0e2a';c.strokeStyle=col;c.lineWidth=3;c.lineJoin='round';
+ shipPath(c,t,s);c.fill();c.stroke();c.shadowBlur=0;c.fillStyle=col;c.beginPath();c.arc(0,0,s*.25,0,6.283);c.fill();c.restore()}
+const myWp=()=>{const s=SHIPS[picks[me]];return sel?s.side:s.main};
+const canAim=()=>S&&!S.over&&!S.anim&&S.turn===me;
+function frame(t){
+ requestAnimationFrame(frame);const dt=Math.min((t-lt)/1000,.1);lt=t;
+ if(!S||$('#game').hidden)return;
+ if(!S.anim&&!S.over){acc+=dt;while(acc>=DT){stepO(S.planets);S.tick++;acc-=DT}}
+ const k=cv.width/W;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);
+ ctx.setTransform(k,0,0,k,(Math.random()-.5)*shake*k,(Math.random()-.5)*shake*k);shake*=.9;if(shake<.3)shake=0;
+ for(const s of S.stars){ctx.fillStyle='rgba(232,234,255,'+(.25+.5*Math.abs(Math.sin(t/900+s[3]*9)))+')';ctx.fillRect(s[0],s[1],s[2],s[2])}
+ for(const p of S.planets){
+  if(p.or){ctx.strokeStyle='rgba(232,234,255,.07)';ctx.setLineDash([3,7]);ctx.beginPath();ctx.arc(p.cx,p.cy,p.or,0,6.283);ctx.stroke();ctx.setLineDash([])}
+  if(p.bh){ctx.save();ctx.shadowColor='#b07cff';ctx.shadowBlur=26;ctx.strokeStyle='#b07cff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y,p.r+5+2*Math.sin(t/250),0,6.283);ctx.stroke();ctx.restore();ctx.fillStyle='#000';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.fill();continue}
+  ctx.strokeStyle='rgba(232,234,255,.08)';ctx.beginPath();ctx.arc(p.x,p.y,p.r*2.3,0,6.283);ctx.stroke();
+  const g=ctx.createRadialGradient(p.x-p.r*.35,p.y-p.r*.35,p.r*.1,p.x,p.y,p.r);g.addColorStop(0,`hsl(${p.h},75%,72%)`);g.addColorStop(1,`hsl(${p.h},60%,30%)`);
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.fill()}
+ S.ghost.forEach((gh,i)=>{if(!gh)return;ctx.fillStyle=COL[i];ctx.globalAlpha=.22;for(const p of gh)for(let j=0;j<p.xs.length;j+=4){ctx.fillRect(p.xs[j]-1,p.ys[j]-1,2,2)}ctx.globalAlpha=1});
+ S.ships.forEach((s,i)=>{
+  const sp=SHIPS[picks[i]];let ang=i?Math.PI:0,v=(i===me&&canAim())?aimVel(i,mx,my):(S.aim&&S.aim[i]);if(v)ang=Math.atan2(v[1],v[0]);
+  ctx.save();ctx.translate(s.x,s.y);drawShip(ctx,picks[i],COL[i],sp.sr,ang);
+  const bw=60;ctx.fillStyle='#222862';ctx.fillRect(-bw/2,-sp.sr-22,bw,7);ctx.fillStyle=COL[i];ctx.fillRect(-bw/2,-sp.sr-22,bw*Math.max(0,s.hp)/s.max,7);
+  if(S.turn===i&&!S.over){ctx.strokeStyle=COL[i];ctx.globalAlpha=.4+.3*Math.sin(t/200);ctx.beginPath();ctx.arc(0,0,sp.sr+16,0,6.283);ctx.stroke();ctx.globalAlpha=1}
+  if(i===me&&canAim()&&v&&!myWp().heal&&!myWp().warp){
+   const dx=mx-s.x,dy=my-s.y,pw=Math.min(Math.sqrt(dx*dx+dy*dy),MAXP)/MAXP;
+   ctx.strokeStyle=COL[i];ctx.globalAlpha=.3;ctx.beginPath();ctx.moveTo(Math.cos(ang)*(sp.sr+14),Math.sin(ang)*(sp.sr+14));ctx.lineTo(Math.cos(ang)*(sp.sr+54),Math.sin(ang)*(sp.sr+54));ctx.stroke();ctx.globalAlpha=1;
+   ctx.fillStyle='#fff';ctx.font='14px Chakra Petch,sans-serif';ctx.textAlign='center';ctx.fillText(Math.round(-ang*180/Math.PI)+'°  '+Math.round(pw*100)+'%',0,sp.sr+30)}
+  ctx.restore()});
+ const a=S.anim;
+ if(a){a.i=Math.min(a.i+2,a.res.n);while(a.ps<a.i){stepO(S.planets);a.ps++}
+  ctx.lineCap='round';
+  for(const p of a.res.projs){if(a.i<p.start)continue;const ix=Math.min(a.i-p.start,p.xs.length-1),L=40;
+   for(let j=Math.max(1,ix-L);j<=ix;j++){const f=(j-(ix-L))/L;ctx.strokeStyle=COL[a.sid];ctx.globalAlpha=Math.max(0,f*.9);ctx.lineWidth=2+f*4;ctx.beginPath();ctx.moveTo(p.xs[j-1],p.ys[j-1]);ctx.lineTo(p.xs[j],p.ys[j]);ctx.stroke()}
+   ctx.globalAlpha=1;if(!(p.hit&&ix>=p.xs.length-1)){ctx.save();ctx.shadowColor=COL[a.sid];ctx.shadowBlur=16;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(p.xs[ix],p.ys[ix],4.5,0,6.283);ctx.fill();ctx.restore()}}
+  if(a.i>=a.res.n)finish()}
+ for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.x+=p.vx*DT;p.y+=p.vy*DT;p.vx*=.97;p.vy*=.97;p.l-=.02;if(p.l<=0){parts.splice(i,1);continue}ctx.globalAlpha=p.l;ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,3*p.l+1,0,6.283);ctx.fill()}
+ ctx.font='bold 26px Chakra Petch,sans-serif';ctx.textAlign='center';
+ for(let i=fl.length-1;i>=0;i--){const f=fl[i];f.l-=.012;f.y-=.6;if(f.l<=0){fl.splice(i,1);continue}ctx.globalAlpha=Math.min(1,f.l*2);ctx.fillStyle=f.c;ctx.fillText(f.t,f.x,f.y)}
+ ctx.globalAlpha=1;if(flash>0){ctx.fillStyle='rgba(232,234,255,'+flash*.5+')';ctx.fillRect(0,0,W,H);flash-=.04}
+}
+/* ---------- UI ---------- */
+function panel(i){const s=S.ships[i],sp=SHIPS[picks[i]],pct=Math.max(0,s.hp)/s.max*100;
+ return `<b style="color:${COL[i]}">${sp.name}${i===me?' (du)':''}</b> ${Math.max(0,s.hp)}/${s.max}<div class="bar"><i style="width:${pct}%;background:${COL[i]}"></i></div><span style="color:var(--d)">${sp.side.n} ×${S.ammo[i]}</span>`}
+function ui(){
+ if(!S)return;$('#h0').innerHTML=panel(0);$('#h1').innerHTML=panel(1);
+ const st=$('#status');st.innerHTML='';st.style.color='';
+ if(S.over){const t=document.createElement('span');t.textContent=(S.winner<0?'Unentschieden!':S.winner===me?'Du hast gewonnen! 🎉':'Verloren.')+'  ('+score[me]+' : '+score[1-me]+')';
+  const b=document.createElement('button');b.className='btn';b.textContent='Nochmal';b.onclick=()=>newGame(game+1,Math.floor(Math.random()*1e9),1);st.append(t,b)}
+ else if(S.anim)st.textContent='Schuss unterwegs …';
+ else{st.style.color=COL[S.turn];const w=myWp();st.textContent=S.turn!==me?'Gegner ist dran …':(w.heal||w.warp)?w.n+': Klick zum Einsetzen':'Du bist dran: zielen und klicken.'}
+ const wb=$('#wb');wb.innerHTML='';const sp=SHIPS[picks[me]];
+ [sp.main,sp.side].forEach((w,i)=>{const b=document.createElement('button');b.className='btn'+(sel===i?' on':'');
+  b.disabled=!canAim()||(i&&S.ammo[me]<=0);b.textContent=(i?'Seite: ':'Haupt: ')+w.n+(i?' ×'+S.ammo[me]:'')+' – '+w.d;b.onclick=()=>{sel=i;ui()};wb.appendChild(b)});
+}
+cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();mx=(e.clientX-r.left)/r.width*W;my=(e.clientY-r.top)/r.height*H});
+cv.addEventListener('pointerdown',e=>{
+ const r=cv.getBoundingClientRect();mx=(e.clientX-r.left)/r.width*W;my=(e.clientY-r.top)/r.height*H;
+ if(!canAim())return;const w=myWp();if(sel&&S.ammo[me]<=0)return;
+ let v=[0,0];if(!w.heal&&!w.warp){v=aimVel(me,mx,my);if(!v)return}
+ const m={t:'act',w:sel,vx:v[0],vy:v[1],tick:S.tick};send(m);act(me,sel,v[0],v[1],S.tick);
+});
+function newGame(n,seed,ann){
+ game=n;S=genMap(seed);S.turn=n%2===1?0:1;S.aim=[null,null];
+ S.ships.forEach((s,i)=>{const sp=SHIPS[picks[i]];s.sr=sp.sr;s.max=s.hp=sp.hp+(i===1-S.turn?15:0);S.ammo[i]=sp.side.ammo||0});
+ snap();parts=[];fl=[];sel=0;if(ann)send({t:'restart',n,seed});
+ $('#lobby').hidden=$('#pick').hidden=true;$('#game').hidden=false;resize();ui();
+}
+/* ---------- Schiffswahl ---------- */
+function buildPick(){
+ const el=$('#ships');el.innerHTML='';
+ SHIPS.forEach((sp,i)=>{const d=document.createElement('div');d.className='sc';
+  d.innerHTML=`<canvas width="120" height="64"></canvas><h3>${sp.name}</h3>${sp.d}<br>Leben <b>${sp.hp}</b><br>Haupt: <b>${sp.main.n}</b> – ${sp.main.d}<br>Seite: <b>${sp.side.n}</b> ×${sp.side.ammo} – ${sp.side.d}`;
+  const c=d.querySelector('canvas').getContext('2d');c.translate(60,32);drawShip(c,i,'#4de1ff',Math.min(sp.sr,20)*1.2,0);
+  d.onclick=()=>{if(myPick!==null)return;myPick=i;d.classList.add('on');$('#pst').textContent='Gewählt: '+sp.name+'. Warte auf Gegner …';
+   if(isHost){picks[0]=i;tryStart()}else send({t:'pick',s:i})};
+  el.appendChild(d)});
+}
+function tryStart(){if(isHost&&picks[0]!==null&&picks[1]!==null&&!S){const seed=Math.floor(Math.random()*1e9);send({t:'init',n:1,seed,picks});newGame(1,seed,0)}}
+/* ---------- Netzwerk ---------- */
+function send(m){try{if(conn&&conn.open)conn.send(m)}catch(e){}}
+const okP=v=>Number.isInteger(v)&&v>=0&&v<4;
+function onData(m){
+ if(!m)return;
+ if(m.t==='pick'&&isHost&&okP(m.s)){picks[1]=m.s;tryStart()}
+ else if(m.t==='init'&&!isHost&&!S&&Array.isArray(m.picks)&&m.picks.every(okP)&&Number.isFinite(m.seed)){me=1;picks=m.picks;newGame(m.n,m.seed,0)}
+ else if(!S)return;
+ else if(m.t==='restart'&&Number.isFinite(m.seed)&&m.n>game)newGame(m.n,m.seed,0);
+ else if(m.t==='act'){const op=1-me,w=m.w===1?1:0,sp=SHIPS[picks[op]],wp=w?sp.side:sp.main;
+  const heal=wp.heal||wp.warp,ok=Number.isFinite(m.vx)&&Number.isFinite(m.vy)&&Math.sqrt(m.vx*m.vx+m.vy*m.vy)<=MAXP*K*1.001&&Number.isInteger(m.tick)&&m.tick>=0&&m.tick<1e7;
+  if(S.turn===op&&!S.anim&&!S.over&&ok&&(!w||S.ammo[op]>0))act(op,w,m.vx,m.vy,m.tick)}
+}
+function enter(){if(conned)return;conned=true;$('#lobby').hidden=true;$('#pick').hidden=false;buildPick()}
+function setup(c){conn=c;c.on('data',onData);c.on('close',()=>{if(conned)gone()});c.on('error',()=>{});c.open?enter():c.on('open',enter)}
+function gone(){const s=S?$('#status'):$('#pst');s.innerHTML='Verbindung weg. ';const b=document.createElement('button');b.className='btn';b.textContent='Neu starten';b.onclick=()=>location.href=location.pathname;s.append(b);if(S)S.over=1}
+function fail(m){$('#start').hidden=false;$('#wait').hidden=true;$('#lmsg').textContent=m;try{peer.destroy()}catch(e){}}
+const rc=()=>Array.from({length:4},()=>AL[Math.floor(Math.random()*AL.length)]).join('');
+function create(n=0){isHost=true;me=0;const c=rc();peer=new Peer(PRE+c);
+ peer.on('open',()=>{$('#start').hidden=true;$('#wait').hidden=false;$('#codeShow').textContent=c});
+ peer.on('connection',x=>{if(conned){x.on('open',()=>x.close());return}setup(x)});
+ peer.on('error',e=>{if(e.type==='unavailable-id'&&n<5){try{peer.destroy()}catch(_){}create(n+1)}else fail('Vermittlungsserver nicht erreichbar ('+e.type+'). WLAN geblockt? Probier einen Handy-Hotspot.')})}
+function join(c){c=(c||'').trim().toUpperCase();if(c.length!==4){$('#lmsg').textContent='Der Code hat 4 Zeichen.';return}
+ isHost=false;me=1;$('#lmsg').textContent='Verbinde …';peer=new Peer();
+ peer.on('open',()=>{setup(peer.connect(PRE+c,{reliable:true}));setTimeout(()=>{if(!conned)fail('Keine Antwort. Code richtig? Läuft der Raum noch?')},12000)});
+ peer.on('error',e=>{if(e.type==='peer-unavailable')fail('Raum nicht gefunden.');else if(!conned)fail('Verbindung fehlgeschlagen ('+e.type+').')})}
+$('#create').onclick=()=>create();$('#join').onclick=()=>join($('#codeIn').value);
+$('#codeIn').onkeydown=e=>{if(e.key==='Enter')join($('#codeIn').value)};
+$('#copy').onclick=async()=>{const l=location.href.split('?')[0].split('#')[0]+'?room='+$('#codeShow').textContent;try{await navigator.clipboard.writeText(l);$('#copy').textContent='Kopiert ✓'}catch(e){prompt('Link:',l)}};
+const pre=new URLSearchParams(location.search).get('room');if(pre){$('#codeIn').value=pre.slice(0,4).toUpperCase();join(pre)}
+requestAnimationFrame(frame);
+</script></body></html>
