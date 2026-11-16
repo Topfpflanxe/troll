@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kästchenkrieg</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{
+  --paper:#f6f7f1; --grid:#cfe0ee; --ink:#26282b; --blue:#1f3fbf; --red:#d6302f; --marker:#ffe45c; --pencil:#9aa0a6;
+  --s:min(94vw, calc(100vh - 230px), 620px);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:'Patrick Hand','Comic Sans MS',cursive;font-size:20px;color:var(--ink);
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  display:flex;flex-direction:column;align-items:center;padding:14px 10px 24px;
+}
+h1{font-size:2.3rem;margin:.2em 0 0;font-weight:400;letter-spacing:.5px}
+h1 span{color:var(--blue)} h1 b{color:var(--red);font-weight:400}
+p{margin:.4em 0}
+.card{background:var(--paper);border:2.5px solid var(--ink);border-radius:6px 10px 7px 12px;padding:18px 20px;width:min(94vw,460px);box-shadow:4px 4px 0 var(--ink);margin-top:16px}
+button.btn{font:inherit;font-size:1.15rem;border:2.5px solid var(--ink);background:var(--marker);color:var(--ink);padding:8px 16px;border-radius:8px 4px 9px 5px;cursor:pointer;box-shadow:3px 3px 0 var(--ink)}
+button.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+button.btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+button.btn.alt{background:#fff}
+input{font:inherit;font-size:1.4rem;border:2.5px solid var(--ink);background:#fff;padding:7px 10px;border-radius:6px;width:8ch;text-transform:uppercase;letter-spacing:3px;text-align:center}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.code{font-size:3rem;letter-spacing:8px;color:var(--blue);margin:4px 0}
+.msg{color:var(--red);min-height:1.2em}
+details{margin-top:14px} summary{cursor:pointer}
+details li{margin:3px 0}
+
+/* Spiel */
+#top{width:var(--s);display:flex;justify-content:space-between;align-items:center;margin-top:4px;gap:8px}
+.chip{border:2.5px solid var(--ink);padding:2px 12px;border-radius:20px;background:#fff;white-space:nowrap}
+.chip.x{color:var(--blue)} .chip.o{color:var(--red)}
+#status{width:var(--s);min-height:2.6em;display:flex;align-items:center;justify-content:center;gap:12px;text-align:center;margin:6px 0 8px;font-size:1.25rem}
+#status.x{color:var(--blue)} #status.o{color:var(--red)}
+#board{width:var(--s);height:var(--s);display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border:3px solid var(--ink);border-radius:4px}
+.sb{position:relative;padding:3.2%;border-right:3.5px solid var(--ink);border-bottom:3.5px solid var(--ink);display:grid;grid-template-columns:repeat(3,1fr);transition:background .2s}
+.sb:nth-child(3n){border-right:0} .sb:nth-child(n+7){border-bottom:0}
+.sb.active{background:rgba(255,228,92,.6)}
+.c{position:relative;border:0;background:transparent;padding:0;margin:0;cursor:default;border-right:1.5px solid var(--pencil);border-bottom:1.5px solid var(--pencil);min-width:0;min-height:0}
+.c:nth-child(3n){border-right:0} .c:nth-child(n+7){border-bottom:0}
+.c:not(:disabled):hover{background:rgba(31,63,191,.14);cursor:pointer}
+.me-o .c:not(:disabled):hover{background:rgba(214,48,47,.14)}
+.c svg,.big svg{position:absolute;inset:12%;width:76%;height:76%;overflow:visible}
+.c.last::after{content:"";position:absolute;inset:2px;border:2px dashed var(--ink);border-radius:50%;opacity:.5}
+.sb.done .c{opacity:.18}
+.big{position:absolute;inset:6%;display:flex;align-items:center;justify-content:center;pointer-events:none;background:rgba(255,255,255,.82);border-radius:8px}
+.big svg{inset:4%;width:92%;height:92%}
+.big.D{font-size:3rem;color:var(--pencil)}
+svg path,svg ellipse{fill:none;stroke-width:11;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:0}
+.x svg path, svg.x path{stroke:var(--blue)} svg.o ellipse{stroke:var(--red)}
+.draw path,.draw ellipse{animation:draw .35s ease-out both}
+.draw path:nth-child(2){animation-delay:.18s}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.draw path,.draw ellipse{animation:none}}
+</style>
+</head>
+<body>
+<h1><span>Kästchen</span><b>krieg</b></h1>
+
+<!-- Lobby -->
+<section id="lobby">
+  <div class="card" id="start">
+    <p>Ultimate Tic-Tac-Toe für zwei. Wo du hinsetzt, muss der andere hin.</p>
+    <div class="row"><button class="btn" id="create">Raum erstellen</button></div>
+    <div class="row"><input id="codeIn" maxlength="4" placeholder="CODE" autocomplete="off"><button class="btn alt" id="join">Beitreten</button></div>
+    <p class="msg" id="lmsg"></p>
+    <details><summary>Regeln</summary>
+      <ul>
+        <li>Das große Feld besteht aus 9 kleinen Tic-Tac-Toe-Feldern.</li>
+        <li>Dein Zug bestimmt das Feld des Gegners: Setzt du unten rechts in ein Feld, muss der andere im Feld unten rechts spielen.</li>
+        <li>Ist dieses Feld schon entschieden oder voll, darf er frei wählen.</li>
+        <li>Wer ein kleines Feld gewinnt, bekommt es. Wer drei kleine Felder in einer Reihe hat, gewinnt.</li>
+      </ul>
+    </details>
+  </div>
+  <div class="card" id="wait" hidden>
+    <p>Dein Raumcode:</p>
+    <div class="code" id="codeShow">····</div>
+    <p>Gib den Code deinem Mitspieler oder schick ihm den Link.</p>
+    <div class="row"><button class="btn" id="copy">Link kopieren</button></div>
+    <p class="msg" id="wmsg">Warte auf Mitspieler …</p>
+  </div>
+</section>
+
+<!-- Spiel -->
+<section id="game" hidden style="display:flex;flex-direction:column;align-items:center">
+  <div id="top"><span class="chip" id="meChip"></span><span class="chip" id="score"></span></div>
+  <div id="status"></div>
+  <div id="board"></div>
+</section>
+
+<script>
+const $=s=>document.querySelector(s);
+const LINES=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+const ALPHA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const PREFIX='kaestchenkrieg-';
+let peer=null,conn=null,isHost=false,me='X',game=0,S=null,started=false,left=false;
+let score={X:0,O:0},boardEls=[],cellEls=[],bigEls=[];
+
+/* ---------- Spiellogik ---------- */
+const lineWin=(a,p)=>LINES.some(l=>l.every(i=>a[i]===p));
+function newState(starter){
+  return {cells:Array.from({length:9},()=>Array(9).fill(null)),bw:Array(9).fill(null),
+          turn:starter,next:-1,over:false,winner:null,last:null};
+}
+function legal(b,c){
+  return !S.over && !S.bw[b] && !S.cells[b][c] && (S.next===-1||S.next===b);
+}
+function apply(b,c,p){
+  S.cells[b][c]=p; S.last=[b,c];
+  if(lineWin(S.cells[b],p)) S.bw[b]=p;
+  else if(S.cells[b].every(Boolean)) S.bw[b]='D';
+  if(lineWin(S.bw,p)){ S.over=true; S.winner=p; }
+  else if(S.bw.every(Boolean)){
+    const x=S.bw.filter(v=>v==='X').length, o=S.bw.filter(v=>v==='O').length;
+    S.over=true; S.winner = x>o?'X':o>x?'O':'D';
+  }
+  if(S.over){ if(S.winner!=='D') score[S.winner]++; }
+  else { S.next = S.bw[c]?-1:c; S.turn = p==='X'?'O':'X'; }
+}
+
+/* ---------- Darstellung ---------- */
+const markSvg=p=>p==='X'
+  ? '<svg viewBox="0 0 100 100" class="x draw"><path pathLength="1" d="M18 20 L82 80"/><path pathLength="1" d="M82 18 L20 82"/></svg>'
+  : '<svg viewBox="0 0 100 100" class="o draw"><ellipse pathLength="1" cx="50" cy="50" rx="31" ry="33" transform="rotate(-12 50 50)"/></svg>';
+
+function buildBoard(){
+  const el=$('#board'); el.innerHTML=''; boardEls=[];cellEls=[];bigEls=[];
+  for(let b=0;b<9;b++){
+    const sb=document.createElement('div'); sb.className='sb'; cellEls[b]=[];
+    for(let c=0;c<9;c++){
+      const btn=document.createElement('button'); btn.className='c'; btn.type='button';
+      btn.setAttribute('aria-label','Feld '+(b+1)+', Zelle '+(c+1));
+      btn.onclick=()=>play(b,c); sb.appendChild(btn); cellEls[b][c]=btn;
+    }
+    const big=document.createElement('div'); big.className='big'; big.hidden=true; sb.appendChild(big);
+    el.appendChild(sb); boardEls[b]=sb; bigEls[b]=big;
+  }
+}
+function render(){
+  const myTurn=S.turn===me && !S.over;
+  $('#board').className = me==='O'?'me-o':'';
+  for(let b=0;b<9;b++){
+    const playable=!S.over && !S.bw[b] && (S.next===-1||S.next===b);
+    boardEls[b].classList.toggle('active',playable);
+    boardEls[b].classList.toggle('done',!!S.bw[b]);
+    const big=bigEls[b], w=S.bw[b];
+    if(w && big.dataset.v!==w){
+      big.hidden=false; big.dataset.v=w; big.className='big'+(w==='D'?' D':'');
+      big.innerHTML = w==='D' ? '–' : markSvg(w);
+    } else if(!w && big.dataset.v){ big.hidden=true; delete big.dataset.v; big.innerHTML=''; }
+    for(let c=0;c<9;c++){
+      const btn=cellEls[b][c], v=S.cells[b][c];
+      if(v && btn.dataset.v!==v){ btn.innerHTML=markSvg(v); btn.dataset.v=v; }
+      else if(!v && btn.dataset.v){ btn.innerHTML=''; delete btn.dataset.v; }
+      btn.disabled = !(myTurn && legal(b,c));
+      btn.classList.toggle('last', !!S.last && S.last[0]===b && S.last[1]===c);
+    }
+  }
+  const st=$('#status'); st.className=S.turn==='X'?'x':'o'; st.innerHTML='';
+  if(S.over){
+    const t=document.createElement('span');
+    if(S.winner==='D'){ t.textContent='Unentschieden!'; st.className=''; }
+    else if(S.winner===me){ t.textContent='Du hast gewonnen! 🎉'; st.className=me==='X'?'x':'o'; }
+    else { t.textContent='Verloren – der Gegner war besser.'; st.className=S.winner==='X'?'x':'o'; }
+    const btn=document.createElement('button'); btn.className='btn'; btn.textContent='Nochmal';
+    btn.onclick=()=>restart(game+1,true);
+    st.append(t,btn);
+  } else {
+    st.textContent = myTurn
+      ? (S.next===-1?'Du bist dran – freie Wahl, setz irgendwo hin.':'Du bist dran – spiel im gelben Feld.')
+      : 'Gegner überlegt …';
+  }
+  const opp=me==='X'?'O':'X';
+  $('#meChip').textContent = 'Du: '+(me==='X'?'blaues Kreuz':'rotes O');
+  $('#meChip').className='chip '+me.toLowerCase();
+  $('#score').textContent = 'Du '+score[me]+' : '+score[opp]+' Gegner';
+}
+
+/* ---------- Züge ---------- */
+function play(b,c){
+  if(!S||S.turn!==me||!legal(b,c)) return;
+  apply(b,c,me); send({t:'move',b,c}); render();
+}
+function restart(n,announce){
+  if(n<=game) return;
+  game=n; S=newState(game%2===1?'X':'O');
+  if(announce) send({t:'restart',n});
+  buildBoard(); render();
+}
+
+/* ---------- Netzwerk ---------- */
+function send(m){ try{ if(conn&&conn.open) conn.send(m); }catch(e){} }
+function onData(m){
+  if(!m||!S) return;
+  if(m.t==='move'){
+    const opp=me==='X'?'O':'X';
+    if(S.turn===opp && Number.isInteger(m.b)&&Number.isInteger(m.c) && m.b>=0&&m.b<9&&m.c>=0&&m.c<9 && legal(m.b,m.c)){
+      apply(m.b,m.c,opp); render();
+    }
+  } else if(m.t==='restart' && m.n>game){ restart(m.n,false); }
+}
+function startGame(){
+  if(started) return; started=true;
+  me=isHost?'X':'O'; score={X:0,O:0}; game=0;
+  $('#lobby').hidden=true; $('#game').hidden=false;
+  restart(1,false);
+}
+function setupConn(c){
+  conn=c;
+  c.on('data',onData);
+  c.on('close',()=>{ if(started) gone(); });
+  c.on('error',()=>{});
+  if(c.open) startGame(); else c.on('open',startGame);
+}
+function gone(){
+  const st=$('#status'); st.className=''; st.innerHTML='';
+  const t=document.createElement('span'); t.textContent='Verbindung weg. Dein Mitspieler hat das Spiel verlassen.';
+  const b=document.createElement('button'); b.className='btn'; b.textContent='Neu starten'; b.onclick=()=>location.href=location.pathname;
+  st.append(t,b);
+  document.querySelectorAll('.c').forEach(x=>x.disabled=true);
+}
+function fail(msg){
+  $('#start').hidden=false; $('#wait').hidden=true; $('#lmsg').textContent=msg;
+  try{ peer&&peer.destroy(); }catch(e){} peer=null;
+}
+const randCode=()=>Array.from({length:4},()=>ALPHA[Math.floor(Math.random()*ALPHA.length)]).join('');
+
+function createRoom(tries=0){
+  isHost=true; $('#lmsg').textContent='';
+  const code=randCode();
+  peer=new Peer(PREFIX+code);
+  peer.on('open',()=>{
+    $('#start').hidden=true; $('#wait').hidden=false; $('#codeShow').textContent=code;
+  });
+  peer.on('connection',c=>{ if(conn&&started){ c.on('open',()=>c.close()); return; } setupConn(c); });
+  peer.on('error',e=>{
+    if(e.type==='unavailable-id' && tries<5){ try{peer.destroy();}catch(_){} createRoom(tries+1); }
+    else fail('Verbindung zum Vermittlungsserver fehlgeschlagen ('+e.type+'). Ist das WLAN geblockt? Probier Handy-Hotspot.');
+  });
+}
+function joinRoom(code){
+  code=(code||'').trim().toUpperCase();
+  if(code.length!==4){ $('#lmsg').textContent='Der Code hat 4 Zeichen.'; return; }
+  isHost=false; $('#lmsg').textContent='Verbinde …';
+  peer=new Peer();
+  peer.on('open',()=>{
+    const c=peer.connect(PREFIX+code,{reliable:true});
+    setupConn(c);
+    setTimeout(()=>{ if(!started) fail('Keine Antwort. Stimmt der Code? Läuft der Raum noch?'); },12000);
+  });
+  peer.on('error',e=>{
+    if(e.type==='peer-unavailable') fail('Raum nicht gefunden. Prüf den Code.');
+    else if(!started) fail('Verbindung fehlgeschlagen ('+e.type+').');
+  });
+}
+
+/* ---------- Lobby ---------- */
+$('#create').onclick=()=>createRoom();
+$('#join').onclick=()=>joinRoom($('#codeIn').value);
+$('#codeIn').addEventListener('keydown',e=>{ if(e.key==='Enter') joinRoom($('#codeIn').value); });
+$('#copy').onclick=async()=>{
+  const link=location.href.split('?')[0].split('#')[0]+'?room='+$('#codeShow').textContent;
+  try{ await navigator.clipboard.writeText(link); $('#copy').textContent='Kopiert ✓'; }
+  catch(e){ prompt('Link kopieren:',link); }
+};
+const pre=new URLSearchParams(location.search).get('room');
+if(pre){ $('#codeIn').value=pre.slice(0,4).toUpperCase(); joinRoom(pre); }
+</script>
+</body>
+</html>
