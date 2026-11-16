@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schwerkraft-Duell</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{--bg:#0b0e2a;--panel:#151a45;--cyan:#4de1ff;--pink:#ff4d8d;--amber:#ffc857;--text:#e8eaff;--dim:#8d93c9}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{font-family:'Chakra Petch','Trebuchet MS',system-ui,sans-serif;font-size:18px;color:var(--text);
+  background:radial-gradient(ellipse at 30% 0%,#1d2260 0%,var(--bg) 60%);background-attachment:fixed;
+  display:flex;flex-direction:column;align-items:center;padding:12px 10px 20px;min-height:100vh}
+h1{font-size:2.4rem;margin:.2em 0 .1em;font-weight:700;letter-spacing:1px}
+h1 .a{color:var(--cyan)} h1 .b{color:var(--pink)}
+p{margin:.45em 0;line-height:1.4}
+.card{background:var(--panel);border:2px solid var(--cyan);border-radius:14px;padding:20px 22px;width:min(94vw,480px);margin-top:14px;box-shadow:0 0 30px rgba(77,225,255,.18)}
+.btn{font:inherit;font-weight:700;border:0;background:var(--amber);color:#1a1630;padding:10px 18px;border-radius:10px;cursor:pointer;font-size:1.05rem}
+.btn:hover{filter:brightness(1.1)} .btn:active{transform:translateY(2px)}
+.btn.alt{background:transparent;color:var(--text);border:2px solid var(--dim)}
+input{font:inherit;font-size:1.5rem;font-weight:700;background:#0b0e2a;color:var(--text);border:2px solid var(--dim);border-radius:10px;padding:7px 10px;width:8ch;text-transform:uppercase;letter-spacing:4px;text-align:center}
+input:focus-visible,.btn:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.code{font-size:3.2rem;font-weight:700;letter-spacing:10px;color:var(--amber)}
+.msg{color:var(--pink);min-height:1.3em}
+ul{padding-left:1.2em;margin:.4em 0} li{margin:4px 0}
+summary{cursor:pointer;color:var(--cyan);margin-top:14px}
+
+#game{width:100%;display:flex;flex-direction:column;align-items:center}
+#wrap{width:min(98vw,calc((100vh - 190px)*1.6667),1100px)}
+#hud{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;font-weight:700;font-size:1.05rem}
+.pl{padding:3px 12px;border-radius:20px;border:2px solid;white-space:nowrap}
+.p0{color:var(--cyan);border-color:var(--cyan)} .p1{color:var(--pink);border-color:var(--pink)}
+#status{min-height:2.4em;display:flex;align-items:center;justify-content:center;gap:12px;text-align:center;margin-bottom:6px;font-size:1.15rem}
+canvas{width:100%;display:block;border-radius:12px;border:2px solid #2b3380;cursor:crosshair;background:#0b0e2a;touch-action:none}
+#emo{display:flex;gap:8px;justify-content:center;margin-top:8px}
+#emo button{font-size:1.5rem;background:var(--panel);border:2px solid #2b3380;border-radius:10px;padding:2px 10px;cursor:pointer}
+#emo button:hover{border-color:var(--amber)}
+.hint{color:var(--dim);font-size:.9rem;text-align:center;margin-top:6px}
+</style>
+</head>
+<body>
+<h1><span class="a">Schwerkraft</span>-<span class="b">Duell</span></h1>
+
+<section id="lobby">
+  <div class="card" id="start">
+    <p>Zwei Schiffe, ein Haufen Planeten. Zielen mit dem Cursor, schießen mit einem Klick, und die Schwerkraft biegt deinen Schuss.</p>
+    <div class="row"><button class="btn" id="create">Raum erstellen</button></div>
+    <div class="row"><input id="codeIn" maxlength="4" placeholder="CODE" autocomplete="off"><button class="btn alt" id="join">Beitreten</button></div>
+    <p class="msg" id="lmsg"></p>
+    <details><summary>Regeln</summary>
+      <ul>
+        <li>Der Abstand zwischen deinem Schiff und dem Cursor ist die Schusskraft, die Richtung ist die Zielrichtung.</li>
+        <li>Planeten ziehen den Schuss an. Die gepunktete Linie zeigt dir den Anfang der Flugbahn.</li>
+        <li>Triffst du einen Planeten, schrumpft er und zieht schwächer. Ist er zu klein, verschwindet er.</li>
+        <li>Das Schwarze Loch zieht extrem stark und frisst alles.</li>
+        <li>Wer das gegnerische Schiff dreimal trifft, gewinnt. Eigene Schüsse können dich auch treffen.</li>
+      </ul>
+    </details>
+  </div>
+  <div class="card" id="wait" hidden>
+    <p>Dein Raumcode:</p>
+    <div class="code" id="codeShow">····</div>
+    <p>Gib den Code deinem Mitspieler oder schick ihm den Link.</p>
+    <div class="row"><button class="btn" id="copy">Link kopieren</button></div>
+    <p class="msg" id="wmsg" style="color:var(--dim)">Warte auf Mitspieler …</p>
+  </div>
+</section>
+
+<section id="game" hidden>
+  <div id="wrap">
+    <div id="hud"><span class="pl" id="h0"></span><span class="pl" id="sc" style="border-color:#2b3380;color:var(--text)"></span><span class="pl" id="h1"></span></div>
+    <div id="status"></div>
+    <canvas id="cv"></canvas>
+    <div id="emo"></div>
+    <div class="hint">Cursor bewegen = zielen, Klick = schießen.</div>
+  </div>
+</section>
+
+<script>
+const $=s=>document.querySelector(s);
+const W=1000,H=600,SR=17,G=2000,DT=1/60,K=3.2,MAXP=240,HP0=3;
+const ALPHA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',PREFIX='schwerkraftduell-';
+const COL=['#4de1ff','#ff4d8d'];
+let peer=null,conn=null,isHost=false,me=0,game=0,S=null,started=false,score=[0,0];
+let mx=W/2,my=H/2,shake=0,parts=[],emos=[];
+
+/* ---------- Zufall & Karte (nur +,-,*,/,sqrt: auf allen Laptops identisch) ---------- */
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function genMap(seed){
+  const R=rng(seed),ships=[{x:70,y:130+R()*340,hp:HP0},{x:930,y:130+R()*340,hp:HP0}],planets=[];
+  const want=4+Math.floor(R()*3);
+  const free=(x,y,r,gap)=>{
+    for(const s of ships){const dx=s.x-x,dy=s.y-y;if(dx*dx+dy*dy<(r+110)*(r+110))return false}
+    for(const p of planets){const dx=p.x-x,dy=p.y-y,m=r+p.r+gap;if(dx*dx+dy*dy<m*m)return false}
+    return true};
+  for(let t=0;t<300&&planets.length<want;t++){
+    const r=26+R()*38,x=220+R()*560,y=60+R()*480;
+    if(free(x,y,r,38))planets.push({x,y,r,m:r*r,h:Math.floor(R()*360),bh:false});
+  }
+  if(R()<0.6)for(let t=0;t<100;t++){
+    const x=250+R()*500,y=80+R()*440;
+    if(free(x,y,15,90)){planets.push({x,y,r:15,m:4500,h:0,bh:true});break}
+  }
+  const stars=Array.from({length:90},()=>[R()*W,R()*H,R()*1.6+.3,R()]);
+  return {seed,ships,planets,stars,turn:0,over:false,winner:-1,anim:null,aim:[null,null]};
+}
+
+/* ---------- Physik ---------- */
+function sim(shooter,vx,vy,steps){
+  const sh=S.ships[shooter],l=Math.sqrt(vx*vx+vy*vy)||1;
+  let x=sh.x+vx/l*(SR+5),y=sh.y+vy/l*(SR+5);
+  const xs=[x],ys=[y];let hit=null;
+  for(let i=0;i<steps&&!hit;i++){
+    let ax=0,ay=0;
+    for(const p of S.planets){
+      const dx=p.x-x,dy=p.y-y,d2=dx*dx+dy*dy+400,inv=G*p.m/(d2*Math.sqrt(d2));
+      ax+=dx*inv;ay+=dy*inv;
+    }
+    vx+=ax*DT;vy+=ay*DT;x+=vx*DT;y+=vy*DT;xs.push(x);ys.push(y);
+    for(let j=0;j<S.planets.length;j++){
+      const p=S.planets[j],dx=p.x-x,dy=p.y-y,m=p.r+3;
+      if(dx*dx+dy*dy<m*m){hit={k:'planet',i:j};break}
+    }
+    if(hit)break;
+    for(let j=0;j<2;j++){
+      if(j===shooter&&i<35)continue;
+      const s=S.ships[j],dx=s.x-x,dy=s.y-y,m=SR+4;
+      if(dx*dx+dy*dy<m*m){hit={k:'ship',i:j};break}
+    }
+    if(!hit&&(x<-250||x>W+250||y<-250||y>H+250))hit={k:'out'};
+  }
+  return{xs,ys,hit};
+}
+function aimVel(sid,px,py){
+  const s=S.ships[sid];let dx=px-s.x,dy=py-s.y;const l=Math.sqrt(dx*dx+dy*dy);
+  if(l<18)return null;
+  const f=Math.min(l,MAXP)/l;return[dx*f*K,dy*f*K];
+}
+function fire(sid,vx,vy){
+  const r=sim(sid,vx,vy,1500);S.anim={...r,i:0,sid};S.aim[sid]=[vx,vy];ui();
+}
+function boom(x,y,col,n,sp){for(let i=0;i<n;i++){const a=Math.random()*6.283,v=(.3+Math.random())*sp;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1,col})}}
+function finish(){
+  const a=S.anim,lx=a.xs[a.xs.length-1],ly=a.ys[a.ys.length-1],h=a.hit;
+  if(h){
+    if(h.k==='ship'){S.ships[h.i].hp--;boom(lx,ly,COL[h.i],50,260);shake=16}
+    else if(h.k==='planet'){
+      const p=S.planets[h.i];
+      if(p.bh)boom(lx,ly,'#b07cff',16,120);
+      else{p.r*=0.85;p.m=p.r*p.r;boom(lx,ly,'hsl('+p.h+',80%,65%)',22,160);shake=6;
+        if(p.r<16){boom(p.x,p.y,'hsl('+p.h+',80%,65%)',40,240);S.planets.splice(h.i,1)}}
+    }
+  }
+  S.anim=null;
+  const dead=S.ships.findIndex(s=>s.hp<=0);
+  if(dead>=0){S.over=true;S.winner=1-dead;score[S.winner]++}
+  else S.turn=1-S.turn;
+  ui();
+}
+
+/* ---------- Darstellung ---------- */
+const cv=$('#cv'),ctx=cv.getContext('2d');
+function resize(){
+  const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;
+  cv.width=Math.round(r.width*d);cv.height=Math.round(r.width*d*H/W);
+}
+addEventListener('resize',resize);
+function hearts(n){return'♥'.repeat(Math.max(n,0))+'♡'.repeat(HP0-Math.max(n,0))}
+function ui(){
+  if(!S)return;
+  $('#h0').textContent='Cyan '+hearts(S.ships[0].hp)+(me===0?' (du)':'');$('#h0').className='pl p0';
+  $('#h1').textContent=(me===1?'(du) ':'')+hearts(S.ships[1].hp)+' Pink';$('#h1').className='pl p1';
+  $('#sc').textContent=score[0]+' : '+score[1];
+  const st=$('#status');st.innerHTML='';st.style.color='';
+  if(S.over){
+    const t=document.createElement('span');
+    t.textContent=S.winner===me?'Du hast gewonnen! 🎉':'Verloren. Der Gegner hat dich erwischt.';
+    st.style.color=COL[S.winner];
+    const b=document.createElement('button');b.className='btn';b.textContent='Nochmal';
+    b.onclick=()=>newGame(game+1,Math.floor(Math.random()*1e9),true);
+    st.append(t,b);
+  }else if(S.anim)st.textContent='Schuss unterwegs …';
+  else{
+    st.style.color=COL[S.turn];
+    st.textContent=S.turn===me?'Du bist dran: zielen und klicken.':'Gegner zielt …';
+  }
+}
+function drawShip(id,t){
+  const s=S.ships[id],c=COL[id];
+  ctx.save();ctx.translate(s.x,s.y);
+  let ang=id===0?0:Math.PI;
+  const aim=(id===me&&S.turn===me&&!S.anim&&!S.over)?aimVel(id,mx,my):S.aim[id];
+  if(aim)ang=Math.atan2(aim[1],aim[0]);
+  ctx.shadowColor=c;ctx.shadowBlur=22;
+  ctx.strokeStyle=c;ctx.lineWidth=5;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(ang)*(SR+9),Math.sin(ang)*(SR+9));ctx.stroke();
+  ctx.fillStyle='#0b0e2a';ctx.beginPath();ctx.arc(0,0,SR,0,6.283);ctx.fill();
+  ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle=c;ctx.beginPath();ctx.arc(0,0,6,0,6.283);ctx.fill();
+  ctx.shadowBlur=0;
+  for(let i=0;i<HP0;i++){ctx.fillStyle=i<s.hp?c:'#2b3380';ctx.beginPath();ctx.arc((i-1)*14,-SR-16,4.5,0,6.283);ctx.fill()}
+  if(S.turn===id&&!S.over){ctx.strokeStyle=c;ctx.globalAlpha=.5+.3*Math.sin(t/200);ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,SR+14+2*Math.sin(t/200),0,6.283);ctx.stroke()}
+  ctx.restore();
+}
+function frame(t){
+  requestAnimationFrame(frame);
+  if(!S||$('#game').hidden)return;
+  const k=cv.width/W;
+  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);
+  const sx=(Math.random()-.5)*shake*k,sy=(Math.random()-.5)*shake*k;shake*=.9;if(shake<.3)shake=0;
+  ctx.setTransform(k,0,0,k,sx,sy);
+  for(const s of S.stars){ctx.fillStyle='rgba(232,234,255,'+(.25+.5*Math.abs(Math.sin(t/900+s[3]*9)))+')';ctx.fillRect(s[0],s[1],s[2],s[2])}
+  for(const p of S.planets){
+    if(p.bh){
+      ctx.strokeStyle='rgba(176,124,255,.25)';ctx.lineWidth=1;ctx.setLineDash([4,6]);ctx.beginPath();ctx.arc(p.x,p.y,75,0,6.283);ctx.stroke();ctx.setLineDash([]);
+      ctx.save();ctx.shadowColor='#b07cff';ctx.shadowBlur=26;ctx.strokeStyle='#b07cff';ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r+5+2*Math.sin(t/250),0,6.283);ctx.stroke();ctx.restore();
+      ctx.fillStyle='#000';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.fill();continue;
+    }
+    ctx.strokeStyle='rgba(232,234,255,.08)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(p.x,p.y,p.r*2.3,0,6.283);ctx.stroke();
+    const g=ctx.createRadialGradient(p.x-p.r*.35,p.y-p.r*.35,p.r*.1,p.x,p.y,p.r);
+    g.addColorStop(0,'hsl('+p.h+',75%,72%)');g.addColorStop(1,'hsl('+p.h+',60%,30%)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.fill();
+  }
+  drawShip(0,t);drawShip(1,t);
+  if(!S.over&&!S.anim&&S.turn===me){
+    const v=aimVel(me,mx,my),s=S.ships[me];
+    if(v){
+      const r=sim(me,v[0],v[1],80);
+      ctx.strokeStyle=COL[me];ctx.globalAlpha=.35;ctx.lineWidth=2;ctx.setLineDash([3,7]);
+      ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(mx,my);ctx.stroke();ctx.setLineDash([]);
+      for(let i=0;i<r.xs.length;i+=2){ctx.fillStyle=COL[me];ctx.globalAlpha=1-i/r.xs.length*.85;ctx.beginPath();ctx.arc(r.xs[i],r.ys[i],2.6,0,6.283);ctx.fill()}
+      ctx.globalAlpha=1;
+      const pw=Math.min(Math.sqrt((mx-s.x)**2+(my-s.y)**2),MAXP)/MAXP;
+      ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(s.x-30,s.y+SR+12,60,5);
+      ctx.fillStyle=COL[me];ctx.fillRect(s.x-30,s.y+SR+12,60*pw,5);
+    }
+  }
+  if(S.anim){
+    const a=S.anim;a.i=Math.min(a.i+3,a.xs.length-1);
+    ctx.lineCap='round';
+    for(let i=Math.max(1,a.i-70);i<=a.i;i++){
+      ctx.strokeStyle=COL[a.sid];ctx.globalAlpha=Math.max(0,(i-(a.i-70))/70*.9);ctx.lineWidth=2+Math.max(0,(i-(a.i-70))/70*4);
+      ctx.beginPath();ctx.moveTo(a.xs[i-1],a.ys[i-1]);ctx.lineTo(a.xs[i],a.ys[i]);ctx.stroke();
+    }
+    ctx.globalAlpha=1;ctx.save();ctx.shadowColor=COL[a.sid];ctx.shadowBlur=18;ctx.fillStyle='#fff';
+    ctx.beginPath();ctx.arc(a.xs[a.i],a.ys[a.i],5,0,6.283);ctx.fill();ctx.restore();
+    if(a.i>=a.xs.length-1)finish();
+  }
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];p.x+=p.vx*DT;p.y+=p.vy*DT;p.vx*=.97;p.vy*=.97;p.life-=.02;
+    if(p.life<=0){parts.splice(i,1);continue}
+    ctx.globalAlpha=p.life;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,3*p.life+1,0,6.283);ctx.fill();
+  }
+  ctx.globalAlpha=1;ctx.font='44px serif';ctx.textAlign='center';
+  for(let i=emos.length-1;i>=0;i--){
+    const e=emos[i];e.life-=.008;e.y-=.7;
+    if(e.life<=0){emos.splice(i,1);continue}
+    ctx.globalAlpha=Math.min(1,e.life*2);ctx.fillText(e.e,e.x,e.y);
+  }
+  ctx.globalAlpha=1;
+}
+
+/* ---------- Eingabe ---------- */
+function toVirt(e){const r=cv.getBoundingClientRect();mx=(e.clientX-r.left)/r.width*W;my=(e.clientY-r.top)/r.height*H}
+cv.addEventListener('pointermove',toVirt);
+cv.addEventListener('pointerdown',e=>{
+  toVirt(e);
+  if(!S||S.over||S.anim||S.turn!==me)return;
+  const v=aimVel(me,mx,my);if(!v)return;
+  send({t:'shot',vx:v[0],vy:v[1]});fire(me,v[0],v[1]);
+});
+['👍','😂','😡','💀'].forEach(e=>{
+  const b=document.createElement('button');b.textContent=e;b.onclick=()=>{send({t:'emo',e});showEmo(me,e)};$('#emo').appendChild(b);
+});
+function showEmo(id,e){if(S)emos.push({e,x:S.ships[id].x,y:S.ships[id].y-50,life:1.5})}
+
+/* ---------- Spielstart ---------- */
+function newGame(n,seed,announce){
+  game=n;S=genMap(seed);S.turn=n%2===1?0:1;parts=[];emos=[];
+  if(announce)send({t:'restart',n,seed});
+  $('#lobby').hidden=true;$('#game').hidden=false;resize();ui();
+}
+
+/* ---------- Netzwerk ---------- */
+function send(m){try{if(conn&&conn.open)conn.send(m)}catch(e){}}
+function onData(m){
+  if(!m)return;
+  if(m.t==='init'){
+    if(!started){started=true;me=1;score=[0,0];game=0}
+    if(Number.isFinite(m.seed)&&m.n>game)newGame(m.n,m.seed,false);
+  }else if(m.t==='restart'){
+    if(started&&Number.isFinite(m.seed)&&m.n>game)newGame(m.n,m.seed,false);
+  }else if(!S)return;
+  else if(m.t==='shot'){
+    const op=1-me,ok=Number.isFinite(m.vx)&&Number.isFinite(m.vy)&&Math.sqrt(m.vx*m.vx+m.vy*m.vy)<=MAXP*K*1.001;
+    if(S.turn===op&&!S.anim&&!S.over&&ok)fire(op,m.vx,m.vy);
+  }else if(m.t==='emo'&&typeof m.e==='string')showEmo(1-me,m.e.slice(0,4));
+}
+function hostStart(){
+  if(started)return;started=true;me=0;score=[0,0];
+  const seed=Math.floor(Math.random()*1e9);
+  newGame(1,seed,false);send({t:'init',n:1,seed});
+}
+function setupConn(c){
+  conn=c;c.on('data',onData);
+  c.on('close',()=>{if(started)gone()});c.on('error',()=>{});
+  if(isHost){if(c.open)hostStart();else c.on('open',hostStart)}
+}
+function gone(){
+  const st=$('#status');st.innerHTML='';st.style.color='var(--pink)';
+  const t=document.createElement('span');t.textContent='Verbindung weg. Dein Mitspieler hat das Spiel verlassen.';
+  const b=document.createElement('button');b.className='btn';b.textContent='Neu starten';b.onclick=()=>location.href=location.pathname;
+  st.append(t,b);if(S)S.over=true;
+}
+function fail(msg){
+  $('#start').hidden=false;$('#wait').hidden=true;$('#lmsg').textContent=msg;
+  try{peer&&peer.destroy()}catch(e){}peer=null;
+}
+const randCode=()=>Array.from({length:4},()=>ALPHA[Math.floor(Math.random()*ALPHA.length)]).join('');
+function createRoom(tries=0){
+  isHost=true;$('#lmsg').textContent='';
+  const code=randCode();peer=new Peer(PREFIX+code);
+  peer.on('open',()=>{$('#start').hidden=true;$('#wait').hidden=false;$('#codeShow').textContent=code});
+  peer.on('connection',c=>{if(conn&&started){c.on('open',()=>c.close());return}setupConn(c)});
+  peer.on('error',e=>{
+    if(e.type==='unavailable-id'&&tries<5){try{peer.destroy()}catch(_){}createRoom(tries+1)}
+    else fail('Verbindung zum Vermittlungsserver fehlgeschlagen ('+e.type+'). Ist das WLAN geblockt? Probier einen Handy-Hotspot.');
+  });
+}
+function joinRoom(code){
+  code=(code||'').trim().toUpperCase();
+  if(code.length!==4){$('#lmsg').textContent='Der Code hat 4 Zeichen.';return}
+  isHost=false;$('#lmsg').textContent='Verbinde …';peer=new Peer();
+  peer.on('open',()=>{
+    setupConn(peer.connect(PREFIX+code,{reliable:true}));
+    setTimeout(()=>{if(!started)fail('Keine Antwort. Stimmt der Code? Läuft der Raum noch?')},12000);
+  });
+  peer.on('error',e=>{
+    if(e.type==='peer-unavailable')fail('Raum nicht gefunden. Prüf den Code.');
+    else if(!started)fail('Verbindung fehlgeschlagen ('+e.type+').');
+  });
+}
+
+/* ---------- Lobby ---------- */
+$('#create').onclick=()=>createRoom();
+$('#join').onclick=()=>joinRoom($('#codeIn').value);
+$('#codeIn').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom($('#codeIn').value)});
+$('#copy').onclick=async()=>{
+  const link=location.href.split('?')[0].split('#')[0]+'?room='+$('#codeShow').textContent;
+  try{await navigator.clipboard.writeText(link);$('#copy').textContent='Kopiert ✓'}catch(e){prompt('Link kopieren:',link)}
+};
+const pre=new URLSearchParams(location.search).get('room');
+if(pre){$('#codeIn').value=pre.slice(0,4).toUpperCase();joinRoom(pre)}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
