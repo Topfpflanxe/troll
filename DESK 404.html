@@ -1,0 +1,192 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>DESK 404</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font:12px Tahoma,Verdana,sans-serif;color:#111}
+#c{width:100%;height:100%;image-rendering:pixelated;display:block}
+#ov{position:fixed;inset:0;background:#3b6b68;display:none}
+.w{position:absolute;background:#c8c8c0;border:2px outset #eee;box-shadow:3px 3px #0005}
+.t{background:linear-gradient(90deg,#10286a,#4a68c0);color:#fff;padding:2px 5px;cursor:move;display:flex;justify-content:space-between;user-select:none}
+.b{padding:6px;max-height:55vh;overflow:auto}button{font:inherit;margin:2px;cursor:pointer}
+pre{white-space:pre-wrap;margin:4px 0}.i{position:absolute;left:12px;width:64px;text-align:center;color:#fff;cursor:pointer;text-shadow:1px 1px #000}
+.i b{display:block;font-size:26px}#tb{position:absolute;bottom:0;left:0;right:0;height:28px;background:#c8c8c0;border-top:2px outset #fff;display:flex;gap:8px;align-items:center;padding:0 6px;justify-content:space-between}
+#cap{position:fixed;bottom:8%;left:0;right:0;text-align:center;color:#e8e8c0;font:15px monospace;text-shadow:1px 1px #000;pointer-events:none;padding:0 14px}
+#snd{position:fixed;top:max(8px,env(safe-area-inset-top));right:8px;z-index:9;opacity:.6;font:11px monospace}
+.sc{position:fixed;inset:0;background:#000;color:#cfcfa8;display:flex;flex-direction:column;align-items:center;justify-content:center;font:16px monospace;text-align:center;z-index:8;white-space:pre-wrap;padding:20px}
+.sc h1{font-size:44px;letter-spacing:8px;margin:0 0 16px}.sc button{font:15px monospace;padding:6px 16px;background:#222;color:#cfcfa8;border:1px solid #777}
+.d{color:#ff8a66}.g{color:#a6e86a}
+html,body{font:15px "Pixelify Sans",Verdana,sans-serif;color:#f4f1d6}
+#c{image-rendering:auto}
+#ov{background:radial-gradient(transparent 50%,#000a),linear-gradient(#1c2a1cc4,#1c2a1cc4),conic-gradient(#6d8a8f 25%,#c9c9ae 0 50%,#6d8a8f 0 75%,#c9c9ae 0) 0 0/96px 96px}
+.w{background:rgba(24,30,24,.95);border:2px solid #7c8c68;border-radius:12px;box-shadow:0 6px 0 #0006;overflow:hidden;color:#f4f1d6}
+.t{background:#4a5a3c;color:#f6e9a0;padding:6px 12px;letter-spacing:1px;text-transform:uppercase}
+.b{padding:10px}
+button{font:inherit;background:#e6c23c;color:#2a2a18;border:0;border-radius:8px;padding:4px 10px;box-shadow:0 3px #8a7420}
+button:active{transform:translateY(2px);box-shadow:0 1px #8a7420}
+pre{font:inherit;line-height:1.35}
+.i{background:rgba(24,30,24,.88);border-radius:10px;padding:6px 2px;width:76px;text-shadow:none;border:2px solid #7c8c68;color:#f4f1d6}
+#tb{background:rgba(24,30,24,.96);border-top:2px solid #7c8c68;height:36px}
+#cap{font:21px "Pixelify Sans",sans-serif;bottom:9%;left:50%;right:auto;transform:translateX(-50%);max-width:80%;background:rgba(18,22,18,.88);border-radius:14px;padding:12px 22px;text-shadow:none;color:#fff}
+#cap:empty{display:none}
+#hud{position:fixed;top:max(12px,env(safe-area-inset-top));left:16px;font:21px "Pixelify Sans",sans-serif;letter-spacing:2px;text-shadow:1px 1px #000;white-space:pre;pointer-events:none;color:#fff}
+#ver{position:fixed;bottom:6px;left:0;right:0;text-align:center;font-size:11px;opacity:.8;pointer-events:none}
+#snd{font:13px "Pixelify Sans",sans-serif;background:rgba(18,22,18,.8);color:#f4f1d6;box-shadow:none}
+.sc{background:#0c120c;font:19px "Pixelify Sans",monospace}
+.sc button{font:19px "Pixelify Sans",monospace;background:#e6c23c;color:#2a2a18;border:0;border-radius:10px;padding:8px 24px;box-shadow:0 4px #8a7420}
+</style></head><body>
+<canvas id="c"></canvas><div id="hud"></div><div id="ver">v1.0.0.0404.1999</div><div id="cap"></div><button id="snd">sound: off</button>
+<div id="ov"><div id="ic"></div><div id="tb"><span id="tk"></span><span><button id="lv">Leave desk</button> <span id="clk"></span></span></div></div>
+<div class="sc" id="st"><h1>DESK 404</h1>Halvern Mutual - IT Support<br><br><button id="go">Sit down</button><br><span id="sv" style="font-size:12px;color:#777"></span></div>
+<div class="sc" id="en" style="display:none;opacity:0;transition:opacity 6s"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+let S;try{S=JSON.parse(localStorage.d404)}catch(e){}S=S||{runs:0,end:[],done:0,hdr:0};
+const save=()=>{try{localStorage.d404=JSON.stringify(S)}catch(e){}};
+const G=21,N=G*G,P=4.2,PX=10,PZ=2,PI=PZ*G+PX,X=i=>((i%G)-PX)*P,Z=i=>(i/G|0)*P;
+const R=new THREE.WebGLRenderer({canvas:$('#c'),antialias:false,powerPreference:'low-power'});
+const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(70,1,.1,140);cam.rotation.order='YXZ';
+function rs(){R.setSize(innerWidth/2|0,innerHeight/2|0,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}onresize=rs;rs();
+sc.fog=new THREE.Fog(0x66755f,8,95);sc.background=new THREE.Color(0x66755f);
+function tex(n,rep){const c=document.createElement('canvas');c.width=c.height=n;const g=c.getContext('2d');g.fillStyle='#d0d0c8';g.fillRect(0,0,n,n);
+for(let k=0;k<n*n/2;k++){g.fillStyle=Math.random()<.5?`rgba(0,0,0,${Math.random()*.3})`:`rgba(255,255,190,${Math.random()*.2})`;g.fillRect(Math.random()*n,Math.random()*n,2,1)}
+const t=new THREE.CanvasTexture(c);t.magFilter=t.minFilter=THREE.LinearFilter;t.wrapS=t.wrapT=THREE.RepeatWrapping;if(rep)t.repeat.set(rep,rep);return t}
+const ct=(t,w,h,bg,fg,f=14)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,w,h);g.fillStyle=fg;g.font=f+'px monospace';t.split('\n').forEach((s,i)=>g.fillText(s,6,f+4+i*(f+3)));const x=new THREE.CanvasTexture(c);x.magFilter=x.minFilter=THREE.LinearFilter;return x};
+const B=new THREE.BoxGeometry(1,1,1),M0=new THREE.MeshBasicMaterial(),M1=new THREE.MeshBasicMaterial({map:tex(32)});
+function cv2(n,fn,rep){const c=document.createElement('canvas');c.width=c.height=n;const g=c.getContext('2d');fn(g,n);for(let k=0;k<n*n/8;k++){g.fillStyle=Math.random()<.5?`rgba(0,0,0,${Math.random()*.18})`:`rgba(255,255,200,${Math.random()*.12})`;g.fillRect(Math.random()*n,Math.random()*n,2,2)}const t=new THREE.CanvasTexture(c);t.magFilter=t.minFilter=THREE.LinearFilter;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rep,rep);return t}
+const M2=new THREE.MeshBasicMaterial({map:cv2(32,(g,n)=>{g.fillStyle='#e0e4d6';g.fillRect(0,0,n,n);g.fillStyle='#8a9a86';g.fillRect(0,n*.55,n,n*.45)},1)});
+const FT=cv2(64,(g,n)=>{g.fillStyle='#d6d4bc';g.fillRect(0,0,n,n);g.fillStyle='#6f8791';g.fillRect(0,0,n/2,n/2);g.fillRect(n/2,n/2,n/2,n/2)},200);
+const CE=cv2(32,(g,n)=>{g.fillStyle='#c4c3aa';g.fillRect(0,0,n,n);g.strokeStyle='#6a6a58';g.lineWidth=3;g.strokeRect(0,0,n,n)},200);
+const mk=(m,n)=>{const o=new THREE.InstancedMesh(B,m,n);o.frustumCulled=false;for(let i=0;i<n;i++)o.setColorAt(i,new THREE.Color(1,1,1));sc.add(o);return o};
+const pA=mk(M2,N),pB=mk(M2,N),dk=mk(M1,N),mo=mk(M0,N),bd=mk(M0,N),hd=mk(M0,N),lt=mk(M0,N),co=mk(M1,49);
+const M=new THREE.Matrix4(),V=new THREE.Vector3(),Q=new THREE.Quaternion(),Sc=new THREE.Vector3(),C=new THREE.Color();
+const put=(o,i,x,y,z,a,b,c)=>{M.compose(V.set(x,y,z),Q,Sc.set(a,b,c));o.setMatrixAt(i,M)};
+const w=new Uint8Array(N).fill(1),m=new Uint8Array(N).fill(1),l=new Uint8Array(N).fill(1),thr=new Float32Array(N),bc=[];
+const pal=[0xb2a784,0x8a9a8a,0x6f7f90,0x9a8a70,0xa89868,0x7a8a6a];
+let p=0,flick=0;
+const st={mail:[],at:0,mv:-1,hh:0,cc:0,pin:'',f:-1,cam:0,rd:0,msg:'',ended:0,sel:0,rem:0,t0:Date.now()};
+const NM={5:PI-2,6:PI+1,7:5*G+12};
+const MD=Math.hypot(PX*P,(G-PZ)*P);
+for(let i=0;i<N;i++){const x=X(i),z=Z(i);bc[i]=pal[Math.random()*6|0];
+put(pA,i,x,.55,z+1.8,3.6,1.1,.1);put(pB,i,x+1.8,.55,z,.1,1.1,3.6);put(dk,i,x,.38,z+1.2,2.2,.76,.8);put(mo,i,x,.98,z+.95,.6,.46,.4);put(lt,i,x,2.7,z,1.6,.05,.5);
+thr[i]=.04+.78*(1-Math.hypot(x,z-Z(PI))/MD)+Math.random()*.14;if(Math.random()<.04)w[i]=0}
+w[PI]=0;[PI-2,PI+1,5*G+12].forEach(i=>{thr[i]=9;w[i]=m[i]=1});thr[PI]=9;put(mo,PI,0,-9,0,0,0,0);
+let k=0;for(let a=0;a<7;a++)for(let b=0;b<7;b++)put(co,k++,((3*a+1.5)-PX)*P,1.4,(3*b+1.5)*P,.5,2.8,.5);co.instanceMatrix.needsUpdate=true;
+function paint(i,f){const L=l[i]?(f?(Math.random()<.5?1:.4):1):.28;
+pA.setColorAt(i,C.setHex(0xb8c4ac).multiplyScalar(L));pB.setColorAt(i,C);dk.setColorAt(i,C.setHex(0xa09468).multiplyScalar(L));
+mo.setColorAt(i,m[i]?C.setHex(0xcdf5c8):C.setHex(0x15150f));bd.setColorAt(i,C.setHex(bc[i]).multiplyScalar(L));hd.setColorAt(i,C.setHex(0xc8a080).multiplyScalar(L));
+lt.setColorAt(i,l[i]&&(!f||L>.5)?C.setHex(0xf2f5b0):C.setHex(0x1c1c14))}
+function dw(i,t){const x=X(i),z=Z(i);if(!w[i]||i==PI){put(bd,i,0,-9,0,0,0,0);put(hd,i,0,-9,0,0,0,0);return}
+const s=i%7?0:Math.sin(t*.5+i)*.1,b=Math.sin(t*2+i)*.02;put(bd,i,x+s,.62,z-.3,.5,.7,.3);put(hd,i,x+s,1.18+b,z-.3,.26,.3,.26)}
+function flush(){[pA,pB,dk,mo,bd,hd,lt].forEach(o=>{o.instanceMatrix.needsUpdate=true;o.instanceColor.needsUpdate=true})}
+const fl=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshBasicMaterial({map:FT,color:0xc0c0b0}));fl.rotation.x=-Math.PI/2;fl.position.set(0,0,80);sc.add(fl);
+const ce=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshBasicMaterial({map:CE,color:0xb8b8a0}));ce.rotation.x=Math.PI/2;ce.position.set(0,2.8,80);sc.add(ce);
+const pz=Z(PI),items=[],pm=(wd,h,map,x,y,z,ry,cap)=>{const o=new THREE.Mesh(new THREE.PlaneGeometry(wd,h),new THREE.MeshBasicMaterial({map,side:2}));o.position.set(x,y,z);o.rotation.y=ry;sc.add(o);if(cap)o.userData.cap=cap;items.push(o);return o};
+const bx=(a,b,c,x,y,z,col,cap)=>{const o=new THREE.Mesh(B,new THREE.MeshBasicMaterial({color:col}));o.scale.set(a,b,c);o.position.set(x,y,z);sc.add(o);if(cap)o.userData.cap=cap;items.push(o);return o};
+const scrT=ct("HALVERN MUTUAL\n\n [Mail] [Tickets]\n [Chat]  [Files]\n\n   09:14",128,96,"#3b6b68","#fff",11);
+const scr=pm(.52,.38,scrT,0,.98,pz+.74,Math.PI);scr.userData.scr=1;
+const mb=bx(.64,.5,.2,0,.98,pz+.86,0xb9b59c);mb.userData.scr=1;
+pm(.24,.24,ct("E9 PIN\n7316\n(if the\nlights go)",64,64,"#e8e070","#222",11),1.74,.95,pz-.2,-Math.PI/2,"A sticky note in your own handwriting.");
+const clk=pm(.4,.4,ct("9:14",64,64,"#ddd","#000",20),-1.1,.95,pz+1.74,Math.PI,"The desk clock.");
+bx(.2,.3,.2,-.8,.9,pz+1.1,0x3a6a2a,"A plant. Still green.");
+bx(.12,.1,.12,.7,.81,pz+.8,0xdddddd,S.runs?"WORLD'S OKAYEST TECH. The chip in it is new.":"WORLD'S OKAYEST TECH.");
+const wk=[0,1,2].map(j=>{const o=new THREE.Mesh(B,new THREE.MeshBasicMaterial({color:[0x555a40,0x704040,0x404a70][j]}));o.scale.set(.4,1.6,.3);o.position.set(-30+j*20,.8,(3+j*5)*P+2.15);sc.add(o);return{o,lim:.3+j*.25,d:j%2?-1:1,h:1}});
+// ---- state
+const T=[
+["Printer jam - P-12","Linda Ames","112","Printer P-12 keeps eating pages. Third time this week!"+(S.runs?" (again, sorry!)":""),["Clear tray 2 jam, restart print spooler","Replace the toner","Tell her to use P-13"],0],
+["Password reset","Dev Pruitt","230","Locked out again. I swear I typed it right.",["Reset in directory, force change at next login","Tell him to wait","Read him your own password"],0],
+["Lights flickering - Zone C","Facilities","-","Fluorescent flicker reported above rows 1-6. Resolve in Building Controls.",[],0,"b"],
+["Mailbox full","Hal Reuss","301","Cannot send. Mailbox over quota.",["Archive mail older than a year","Delete the whole mailbox","Raise quota to unlimited"],0],
+["VPN will not connect","Tomas Weir","388","VPN drops every time. I am at my desk, nothing wrong here.",["Check his session in Remote Desktop, then reset it","Reinstall Windows","Ignore it"],0,"r"],
+["Offboard: L. AMES (112)","HR Ops","-","Offboard L. Ames, desk 112, effective today. Standard form attached.",["Deactivate account and disable badge","Mark request as declined","Ask the employee first"],0,"o"],
+["Offboard: D. PRUITT (230)","HR Ops","-","Offboard D. Pruitt, desk 230, effective today. Standard form attached.",["Deactivate account and disable badge","Mark request as declined","Ask the employee first"],0,"o"],
+["Offboard: T. WEIR (388)","HR Ops","-","Offboard T. Weir, desk 388, effective today. Standard form attached.",["Deactivate account and disable badge","Mark request as declined","Ask the employee first"],0,"o"],
+["Headcount alignment (bulk)","HR Ops","-","Q4 alignment. 212 accounts listed in attachment. Process as standard.",["Run bulk deactivation","Process 10 at a time","Request a second approver"],0,"o"],
+["Badge audit","Facilities","-","One badge unaccounted for in the audit: desk 404.",["Confirm badge 404 is active","Mark badge as lost","Ask HR Ops who holds 404"],0],
+["Offboard: O. MARLOW (404)","HR Ops","-","Offboard O. Marlow, desk 404, effective today. Standard form attached.",["Deactivate account and disable badge","Escalate to HR Ops","Open the restore tool"],0,"f"]];
+const mail=(f,s,b,h)=>st.mail.unshift({f,s,b,h,r:0});
+mail("IT Ops","Reminder: log every ticket","Log every ticket. Close within SLA. Do not close tickets you did not open.");
+mail("Facilities","Kitchenette fridge","Fridge clean-out Friday. Anything labelled will be kept.");
+mail("Linda Ames","re: lunch?","Soup in the kitchenette again. Come down if you can.");
+if(S.runs)mail("HR Ops","Welcome back","Welcome.");
+const fx=k=>{if(NM[k]!=null)thr[NM[k]]=Math.max(0,p-.1);if(k==8)for(let i=0;i<N;i++)if(i!=PI&&Math.random()<.6&&thr[i]>p)thr[i]=p+Math.random()*.12;
+if(k==9)mail("O. Marlow","Re: Re: Welcome","If you are reading this, check where the requests come from. Everything you need is in the headers. - O.");
+if(k>=5&&k<=8)mail("HR Ops","Thank you","Offboarding processed. Thank you for the quick turnaround.",1)};
+const tgt=()=>Math.min(1,S.done/11*.93+Math.min((Date.now()-st.t0)/1e3,600)/600*.03+Math.min(.04*S.runs,.16));
+function begin(){p=tgt();for(let k=0;k<S.done;k++)fx(k);for(let i=0;i<N;i++){if(i!=PI&&p>thr[i]){w[i]=0;if(p>thr[i]+.06)m[i]=0;if(p>thr[i]+.14)l[i]=0}paint(i);dw(i,0)}flush();st.at=Date.now()+4e3}
+// ---- audio
+let A,aon=0,hum,buz,nb;
+function snd(){aon=!aon;$('#snd').textContent='sound: '+(aon?'on':'off');if(!A&&aon){A=new AudioContext;const L=A.sampleRate*2,b=A.createBuffer(1,L,A.sampleRate),d=b.getChannelData(0);nb=b;let s=0;for(let i=0;i<L;i++){s=(s+(Math.random()*2-1)*.05)*.98;d[i]=s*8}
+const n=A.createBufferSource();n.buffer=b;n.loop=true;const f=A.createBiquadFilter();f.frequency.value=260;hum=A.createGain();n.connect(f).connect(hum).connect(A.destination);n.start();
+const o=A.createOscillator();o.type='sawtooth';o.frequency.value=100;const f2=A.createBiquadFilter();f2.frequency.value=300;buz=A.createGain();o.connect(f2).connect(buz).connect(A.destination);o.start()}
+if(A)aon?A.resume():A.suspend()}
+$('#snd').onclick=snd;
+function click(v){const s=A.createBufferSource();s.buffer=nb;s.playbackRate.value=3;const g=A.createGain();g.gain.setValueAtTime(v,A.currentTime);g.gain.exponentialRampToValueAtTime(.001,A.currentTime+.04);const f=A.createBiquadFilter();f.type='highpass';f.frequency.value=2000;s.connect(f).connect(g).connect(A.destination);s.start(0,Math.random())}
+// ---- loop
+let last=0,acc=0,mx=0,my=0,sx=0,sy=0,mode='r',tz=0,cx=0,cz=0,cap='',capT=0;
+onmousemove=e=>{mx=(e.clientX/innerWidth-.5)*2;my=(e.clientY/innerHeight-.5)*2};
+const say=(t,s=4)=>{$('#cap').textContent=t;capT=s};
+const RC=new THREE.Raycaster();
+$('#c').onclick=e=>{if(st.ended||mode!='r')return;RC.setFromCamera({x:mx,y:-my},cam);const h=RC.intersectObjects(items)[0];if(!h)return;if(h.object.userData.scr){mode='d'}else if(h.object.userData.cap)say(h.object.userData.cap)};
+function leave(){mode='r';$('#ov').style.display='none'}$('#lv').onclick=leave;
+function obs(i){if(mode!='r')return 0;const dx=X(i)-cx,dz=Z(i)-cz,d=Math.hypot(dx,dz)+.01;if(d>85)return 0;const fx=-Math.sin(cam.rotation.y),fz=-Math.cos(cam.rotation.y);return (dx*fx+dz*fz)/d>.6}
+function tick(t,dt){$('#hud').textContent="TICKETS CLOSED\n"+S.done;if(st.ended)return;p+=(tgt()-p)*.25*.03*4;const fk=1-.85*p;sc.fog.color.setRGB(.4*fk,.46*fk,.37*fk);sc.background.copy(sc.fog.color);sc.fog.far=95-45*p;
+flick=S.done==2&&Date.now()>st.at;let aw=0,al=0;
+for(let i=0;i<N;i++){let ch=0;const fz=flick&&(i/G|0)<7&&l[i];
+if(i!=PI&&(w[i]||m[i]||l[i])&&p>thr[i]&&!obs(i)){if(w[i]){w[i]=0;ch=1}if(m[i]&&p>thr[i]+.06){m[i]=0;ch=1}if(l[i]&&p>thr[i]+.14){l[i]=0;ch=1}}
+if(ch||fz)paint(i,fz);if(ch||w[i])dw(i,t);aw+=w[i];al+=l[i]}
+wk.forEach(k=>{k.o.visible=k.h&&p<k.lim||(p<k.lim+.1&&obs(Math.round(PZ+3)*G+PX));if(k.h&&p>k.lim&&!obs(PI+G*4))k.h=0;k.o.position.x+=k.d*.1*4;if(Math.abs(k.o.position.x)>40)k.d*=-1});
+flush();
+if(A&&aon){hum.gain.value=.05+.15*al/N;buz.gain.value=.012*al/N;if(Math.random()<aw/N*.5)click(.04*aw/N)}}
+function loop(tm){requestAnimationFrame(loop);const t=tm/1e3,dt=Math.min(.05,t-last);last=t;
+sx+=(mx-sx)*.08;sy+=(my-sy)*.08;tz+=((mode=='d'?1:0)-tz)*Math.min(1,dt*3.5);
+const k=tz,ry=Math.PI-sx*1.4*(1-k),rx=-sy*.4*(1-k);cam.rotation.set(rx,ry,0);cx=0;cz=pz-.5+.45*k;cam.position.set(0,1.2-.21*k,cz);cam.fov=70-40*k;cam.updateProjectionMatrix();
+if(mode=='d'&&tz>.96&&$('#ov').style.display!='block'){$('#ov').style.display='block';ui()}
+acc+=dt;if(acc>.25&&$('#st').style.display=='none'){tick(t,acc);acc=0}
+if(capT>0){capT-=dt;if(capT<=0)$('#cap').textContent=''}
+if(((t*10)|0)%30==0&&mode=='d'&&p>.55&&!clk.fr){clk.fr=1;clk.material.map=ct("4:04",64,64,"#ddd","#000",20)}
+R.render(sc,cam)}
+// ---- desktop
+let zi=9;const ws={};const stage=()=>p<.3?0:p<.65?1:2;
+const AP={mail:{t:"Mail",w:380,f:()=>{if(st.mv<0)return st.mail.map((x,i)=>`<div><button onclick="st.mv=${i};st.mail[${i}].r=1;draw('mail')">${x.r?"":"* "}${x.f}: ${x.s}</button></div>`).join("");
+const x=st.mail[st.mv];return `<button onclick="st.mv=-1;draw('mail')">&lt; Inbox</button><button onclick="st.hh=!st.hh;if(st.hh&&${x.h?1:0}){S.hdr=1;save()}draw('mail')">Headers</button><pre><b>From:</b> ${x.f}\n<b>Subj:</b> ${x.s}\n${st.hh?"Received: halvern-mx1\nX-Originating-Desk: "+(x.h?"404":[112,230,301,388,150][x.s.length%5])+"\n":""}\n${x.b}</pre>`}},
+tickets:{t:"IT Tickets",w:400,f:()=>{const q=S.done<T.length&&Date.now()>=st.at;if(!q)return "<pre>Queue empty.\n\nLast closed: "+(S.done?T[S.done-1][0]:"-")+"</pre>";const t=T[S.done],j=S.done;
+return `<pre><b>#${4400+j*17}  ${t[0]}</b>\nFrom: ${t[1]}  Desk: ${t[2]}\n\n${t[3]}</pre>`+(t[6]=="b"?"<i>Resolve in Building Controls.</i>":t[4].map((o,n)=>`<div><button onclick="opt(${n})">${o}</button></div>`).join(""))+`<pre class=d>${st.msg}</pre>`}},
+chat:{t:"Chat",w:330,f:()=>{const c=CT[st.cc];return CT.map((x,i)=>{const on=x[1]<0||(w[x[1]]&&m[x[1]]);return `<button onclick="st.cc=${i};draw('chat')"><span class=${on?"g":"d"}>●</span> ${x[0]}</button>`}).join("")+`<pre>${CT[st.cc][1]<0||(w[CT[st.cc][1]]&&m[CT[st.cc][1]])?CT[st.cc][0]+": "+CT[st.cc][2][stage()]:"offline - last seen 09:12"}</pre>`}},
+files:{t:"Explorer",w:360,f:()=>{if(st.f<0)return ["roster.csv","logs.txt","notes.txt"].concat(S.done>=9?["restore.bat"]:[]).map((x,i)=>`<div><button onclick="st.f=${i};draw('files')">${x}</button></div>`).join("");
+const b=`<button onclick="st.f=-1;draw('files')">&lt; Back</button>`;const al=[...w].reduce((a,b)=>a+b,0);
+if(st.f==0)return b+`<pre>ID,NAME,DESK,STATUS\n1,AMES L.,112,${w[PI-2]?"ACTIVE":"INACTIVE"}\n2,PRUITT D.,230,${w[PI+1]?"ACTIVE":"INACTIVE"}\n3,WEIR T.,388,${w[5*G+12]?"ACTIVE":"INACTIVE"}\n4,MARLOW O.,404,ACTIVE (since 1999-03-02)\n...\nACTIVE: ${al} / 441</pre>`;
+if(st.f==1)return b+`<pre>${S.done<5?"no entries":T.slice(5,Math.min(S.done,9)).map(x=>"OFFBOARD "+x[0].slice(10)+"  origin: DESK 404").join("\n")}</pre>`;
+if(st.f==2)return b+`<pre>IT handover.\nNever offboard without a second approver.\nIf the lights go, the exit is Fire Door E-9.\n- previous tech, O.M.</pre>`;
+return b+`<pre>RESTORE ALL DIRECTORY ACCOUNTS.\nThis cannot be undone.</pre><button onclick="end('B')">Run</button>`}},
+cctv:{t:"CCTV",w:300,f:()=>`<button onclick="st.cam=0;draw('cctv')">1</button><button onclick="st.cam=1;draw('cctv')">2</button><button onclick="st.cam=2;draw('cctv')">3</button><canvas id=cv width=252 height=84 style="display:block;background:#000"></canvas><pre>REC 02 MAR 09:14:07</pre>`},
+remote:{t:"Remote Desktop",w:340,f:()=>[112,230,388,404].map(d=>`<button onclick="st.rd=${d};if(${d}==388)st.rem=1;draw('remote')">Desk ${d}</button>`).join("")+`<pre>${st.rd==404?"Session in use by: you":st.rd==388?(w[5*G+12]?"[Notepad]\ndo not close this session":"Session active. User not present."):st.rd?"Session active. User not present.":"Select a desk."}</pre>`},
+build:{t:"Building Controls",w:300,f:()=>`<b>Lighting</b><br>${["A","B","C","D"].map(z=>`<button onclick="zone('${z}')">Reset Zone ${z}</button>`).join("")}<pre class=d>${st.zm||""}</pre><b>Fire Door E-9</b><pre>PIN: ${st.pin.replace(/./g,"*")}</pre>${[1,2,3,4,5,6,7,8,9,0].map(n=>`<button onclick="st.pin=(st.pin+${n}).slice(0,4);draw('build')">${n}</button>`).join("")}<button onclick="if(st.pin=='7316')end('C');else{st.pin='';st.zm='Invalid PIN';draw('build')}">Open</button>`},
+cal:{t:"Calendar",w:280,f:()=>"<pre><b>TUE 2 MARCH</b>\n09:00 Standup (cancelled)\n12:00 Lunch\n15:00 Headcount review\n\nTUE 2 MARCH\n15:00 Headcount review</pre>"}};
+const CT=[["Linda Ames",PI-2,["morning! P-12 is being weird again","off to the kitchenette, back soon","(away)"]],["Dev Pruitt",PI+1,["I forgot my password. Again.","do you ever take lunch?","which desk are you at?"]],["Tomas Weir",5*G+12,["VPN is down, sorry!","I will stay late, no rush","you there?"]],["Facilities",-1,["Zone C lighting: nominal","Zone C lighting: nominal","Zone D lighting: no response"]]];
+const IC=[["mail","✉","Mail"],["tickets","▤","Tickets"],["chat","☺","Chat"],["files","▣","Files"],["cctv","◉","CCTV"],["remote","▭","Remote"],["build","⚙","Building"],["cal","▦","Calendar"]];
+$('#ic').innerHTML=IC.map((x,i)=>`<div class=i style="top:${14+i*74}px" onclick="openw('${x[0]}')"><b>${x[1]}</b>${x[2]}</div>`).join("");
+function openw(id){let o=ws[id];if(!o){o=ws[id]=document.createElement('div');o.className='w';const n=Object.keys(ws).length;o.style.cssText=`left:${100+n*26}px;top:${24+n*24}px;width:${Math.min(AP[id].w,innerWidth-110)}px`;
+o.innerHTML=`<div class=t><span>${AP[id].t}</span><span style="cursor:pointer" onclick="clw('${id}')">✕</span></div><div class=b></div>`;$('#ov').appendChild(o);
+const tb=o.firstChild;tb.onmousedown=e=>{const ox=e.clientX-o.offsetLeft,oy=e.clientY-o.offsetTop;o.style.zIndex=++zi;document.onmousemove=ev=>{o.style.left=ev.clientX-ox+'px';o.style.top=ev.clientY-oy+'px'};document.onmouseup=()=>{document.onmousemove=null}}}
+o.style.zIndex=++zi;draw(id)}
+function clw(id){ws[id].remove();delete ws[id]}
+function draw(id){const o=ws[id];if(!o)return;const b=o.lastChild,s=b.scrollTop;b.innerHTML=AP[id].f();b.scrollTop=s;if(id=='cctv')cctv()}
+function cctv(){const c=$('#cv');if(!c)return;const g=c.getContext('2d'),r0=st.cam*7;if(p>.5+.12*(2-st.cam)&&st.cam>0){g.fillStyle='#222';g.fillRect(0,0,252,84);g.fillStyle='#999';g.fillText('NO SIGNAL',90,44);return}
+for(let r=0;r<7;r++)for(let q=0;q<G;q++){const i=(r0+r)*G+q;g.fillStyle=(p-.12<thr[i])||i==PI?'#2a3a22':'#0c0e0a';g.fillRect(q*12,r*12,11,11);if((p-.12<thr[i]||thr[i]>8)&&i!=PI&&w[i]){g.fillStyle='#8c8';g.fillRect(q*12+4,r*12+4,4,4)}}}
+function ui(){Object.keys(ws).forEach(draw);$('#tk').textContent=S.done<T.length&&Date.now()>=st.at?"[1 new ticket]":"";const d=new Date(0,0,0,9,14+S.done*37);$('#clk').textContent=(S.done>=10?"4:04":d.getHours()+":"+String(d.getMinutes()).padStart(2,"0"))}
+setInterval(()=>{if($('#ov').style.display=='block')ui()},1500);
+function zone(z){if(z=='C'){if(S.done==2&&Date.now()>st.at){st.zm="Zone C reset.";closeT()}else st.zm="Zone C nominal."}else st.zm="Zone "+z+" nominal.";draw('build')}
+function closeT(){const k=S.done;S.done++;st.msg="";st.at=Date.now()+14e3+Math.random()*14e3;fx(k);save();ui();if(A&&aon)click(.2)}
+function opt(n){const t=T[S.done];if(S.done==10){if(n==0)return end('A');st.msg=n==1?"HR Ops: request origin is desk 404.":"The restore tool is in Files.";return draw('tickets')}
+if(n!=t[5])st.msg=t[6]=="o"?(n==1?"The request was resubmitted by HR Ops.":"Linda is not responding in Chat."):"That did not resolve it.";
+else if(t[6]=="r"&&!st.rem)st.msg="Check his session in Remote Desktop first.";else return closeT();draw('tickets')}
+// ---- endings
+const ET={A:"Account O. MARLOW deactivated.\nActive accounts: 0.\n\nThe hum stops.",B:"Restore complete.\nActive accounts: 441.\n\nEveryone is back.\nNobody looks up.",C:"The fire door opens onto grey morning.\nThe car park is empty.\nYour phone buzzes once.\n\n1 new ticket.\nFrom: DESK 404"};
+function end(k){if(st.ended)return;st.ended=k;leave();S.end.push(k);S.runs++;S.done=0;save();const o=[...Array(N).keys()].filter(i=>i!=PI).sort((a,b)=>Math.hypot(X(a),Z(a)-pz)-Math.hypot(X(b),Z(b)-pz));if(k!='B')o.reverse();
+setTimeout(()=>{const iv=setInterval(()=>{for(let n=0;n<8;n++){const i=o.shift();if(i==null){clearInterval(iv);flush();setTimeout(fin,4e3);return}
+if(k=='B'){w[i]=m[i]=l[i]=1}else{w[i]=m[i]=0;l[i]=k=='C'&&i>N-40?1:0}paint(i);dw(i,0)}flush()},60)},2500);
+function fin(){const e=$('#en');e.style.display='flex';e.innerHTML=ET[k]+"\n\nEndings found: "+[...new Set(S.end)].length+"/3\n\n<button onclick='location.reload()'>Again</button>";setTimeout(()=>e.style.opacity=1,50)}}
+$('#go').onclick=()=>{begin();$('#st').style.display='none';st.t0=Date.now();say("Click the monitor.",6)};
+$('#sv').textContent=S.runs?"Shifts worked: "+S.runs:"";
+requestAnimationFrame(loop);
+</script></body></html>
